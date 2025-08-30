@@ -15,6 +15,7 @@
                 <div class="box-body">
                     <div class="form-group">
                         <div class="row">
+
                             <div class="col-sm-4">
                                 <label>Customer Name</label>
                                 <div class="clearfix"></div>
@@ -25,9 +26,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table id="customerMemberInfo" class='display dataTable table table-bordered table-hover' >
-                            <thead>
+                    <table id="customerMemberInfo" class='display dataTable table table-bordered table-hover' >
+                        <thead>
                             <tr>
                                 <th style="width:5%;">SL.</th>
                                 <th>Name</th>
@@ -39,15 +39,14 @@
                                 <th>Status</th>
                                 <th style="width:15%;">Action</th>
                             </tr>
-                            </thead>
-                            <tbody>
+                        </thead>
+                        <tbody>
 
-                            </tbody>
-                            <tfoot>
+                        </tbody>
+                        <tfoot>
 
-                            </tfoot>
-                        </table>
-                    </div>
+                        </tfoot>
+                    </table>
                 </div>
                 <!-- /.box-body -->
             </div>
@@ -57,7 +56,7 @@
     </div>
 </section>
 <div class="modal fade" id="myModal" role="dialog">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
 
         <form action="" method="post" id="customerMemberInfoForm" class="form-horizontal" enctype="multipart/form-data">
             <div class="modal-content">
@@ -66,21 +65,6 @@
                     <h4 class="modal-title"><?php echo (!empty($title)?$title:'') ?> Information</h4>
                 </div>
                 <div class="modal-body">
-                    <div class="clearfix"></div>
-                    <!--
-                    <div class="form-group col-sm-12">
-                        <label class="col-sm-3 text-right">
-                           Outlet
-                        </label>
-                        <div class="col-sm-9">
-                            <select class="form-control" required name="outlet_id"  id="outlet_id">
-                                <option value="">Select Outlet</option>
-                                <?php if(!empty($outlet_info)){ foreach ($outlet_info as $outlet) { ?>
-                                    <option value="<?php echo $outlet->id; ?>"><?php echo $outlet->name; ?></option>
-                                <?php } }?>
-                            </select>
-                        </div>
-                    </div>-->
                     <div class="form-group col-sm-12">
                         <label class="col-sm-3 text-right">
                             Name
@@ -127,8 +111,6 @@
                                    id="customer_date_of_birth">
                         </div>
                     </div>
-
-
                     <div class="form-group col-sm-12">
                         <label class="col-sm-3 text-right">
                             Remarks
@@ -138,6 +120,39 @@
                                       id="remarks"></textarea>
                         </div>
                     </div>
+                    <div class="form-group col-sm-12">
+                        <label class="col-sm-3 text-right">
+                             Opening Balance Type
+                        </label>
+                        <div class="col-sm-9">
+                            <div class="form-check">
+                                <input class="form-check-input openingBalanceType" type="radio" name="openingBalanceType"
+                                       id="openingBalanceType1"
+                                       value="1" checked>
+                                <label class="form-check-label" for="openingBalanceType1">
+                                    Due (আপনি কাস্টমারের কাছে পাবেন)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input openingBalanceType" type="radio" name="openingBalanceType"
+                                       id="openingBalanceType2" value="2">
+                                <label class="form-check-label" for="openingBalanceType2">
+                                    Advanced (কাস্টমার আপনার কাছে পাবেন)
+                                </label>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="form-group col-sm-12">
+                        <label class="col-sm-3 text-right">
+                             Opening <span class="openingBalanceType">Due</span> Amount
+                        </label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control " name="openingDue" placeholder=" Amount"
+                                   id="openingDue">
+                        </div>
+                    </div>
+
                     <div class="form-group col-sm-12">
                         <label class="col-sm-3 text-right">
                             Status

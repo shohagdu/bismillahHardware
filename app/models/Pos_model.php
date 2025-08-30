@@ -18,9 +18,11 @@ class Pos_model extends CI_Model {
         }
     }
     public function get_single_sales_infoSha1($id) {
-        $this->db->select("sales_info.*,customer_shipment_member_info.name as customer_name,customer_shipment_member_info.mobile  as customer_mobile,customer_shipment_member_info.email,customer_shipment_member_info.address,tbl_pos_users.username as user_name");
+        $this->db->select("sales_info.*,customer_shipment_member_info.name as customer_name,customer_shipment_member_info.mobile  as customer_mobile,customer_shipment_member_info.email,customer_shipment_member_info.address,tbl_pos_users.username as user_name,transaction_info.bank_id as paymentBankID");
         $this->db->where("sha1(sales_info.id)", $id);
+
         $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = sales_info.customer_id', 'left');
+        $this->db->join('transaction_info', 'transaction_info.sales_id = sales_info.id', 'left');
         $this->db->join('tbl_pos_users', 'tbl_pos_users.userID = sales_info.created_by', 'left');
         $this->db->from('sales_info');
         $query_result = $this->db->get();
@@ -109,18 +111,10 @@ class Pos_model extends CI_Model {
         $i=(!empty($start)?$start+1:1);
         if(!empty($records)) {
             foreach ($records as $key => $record) {
-                $action='';
                 $data[] = $record;
                 $data[$key]->serial_no = (int) $i++;
                 $data[$key]->is_active =  ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
-
-                $action .= ' <a href="'. base_url('pos/show/'.$record->id).'" class="btn btn-info  btn-xs"   ><i  class="glyphicon glyphicon-share-alt"></i> View</a> <a href="'. base_url('pos/update/'.sha1($record->id)).'"  class="btn btn-primary  btn-xs"  ><i  class="glyphicon glyphicon-pencil"></i> Edit</a>';
-
-                if ($this->session->userdata('abhinvoiser_1_1_role') == 'superadmin') {
-                    $action .= '<button onclick="deleteSalesInformation('.$record->id.')"  type="button" class="btn btn-danger  btn-xs"   ><i  class="glyphicon glyphicon-remove"></i> Delete</button> ';
-                }
-
-                $data[$key]->action = $action;
+                $data[$key]->action = ' <a href="'. base_url('pos/show/'.$record->id).'" class="btn btn-info  btn-xs"   ><i  class="glyphicon glyphicon-share-alt"></i> View</a> <a href="'. base_url('pos/update/'.sha1($record->id)).'"  class="btn btn-primary  btn-xs"  ><i  class="glyphicon glyphicon-pencil"></i> Edit</a> <button onclick="deleteSalesInformation('.$record->id.')"  type="button" class="btn btn-danger  btn-xs"   ><i  class="glyphicon glyphicon-remove"></i> Delete</button> ';
 
 
 
@@ -164,19 +158,6 @@ class Pos_model extends CI_Model {
 #--------------------------------------------------------------------- ------------------------------------------------
 #------------------------------------------------update for SK Fashion ------------------------------------------------
 #--------------------------------------------------------------------- ------------------------------------------------
-    public function checkingTransactionExist($where)
-    {
-        $this->db->select('transaction_info.*');
-        $this->db->where($where);
-        $this->db->where("is_active",1);
-        $query = $this->db->get("transaction_info");
-        if ($query->num_rows() > 0){
-            return ['status'=>'success','message'=>"Successfully Data Found",'data'=>$query->row()];
-        }
-        else{
-            return ['status'=>'error','message'=>"No Data Found",'data'=>''];
-        }
-
-    }
+    
 
 }

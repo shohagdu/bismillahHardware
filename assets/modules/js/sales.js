@@ -2,9 +2,10 @@ $(function () {
     $("#productName").focus();
     $("#member_status").hide();
     $("#member_status_red").hide();
+
+
 });
 $("#productName").autocomplete({
-
     source: function (request, response) {
         $.getJSON(base_url+"pos/get_product_list_by_branch", {term: request.term},
             response);
@@ -57,11 +58,10 @@ var addRowProduct = function (id, inventory, price, value,  productCode,unit_sal
              // todo: IF PRODUCT IS EXIST THEN AUTOMATIC ADD IN QUEUE END
 
             $('<tr>\n\
-                        <td style="width:20%;"  class="appenTd">' + value + ' <span class="badge pull-right"> Stock '+ inventory +'</span><div style="color:red;font-size:11px;text-align: center" class="badge" id="qty_empty_'+id+'"></div> </td>\n\
+                        <td style="width:30%;" class="appenTd">' + value + ' <span class="badge pull-right"> Stock '+ inventory +'</span><div style="color:red;font-size:11px;text-align: center" class="badge" id="qty_empty_'+id+'"></div> </td>\n\
                 <td style="text-align:center;width:10%;" class="appenTd"><input id="price_' + id + '" tabindex="-1" name="price[]" value="' + unit_sale_price + '" style="text-align: center;height:30px;" class="unit_price" type="text"></td>\n\
-                    <td style="text-align:center;width:10%;" class="appenTd"><input id="qty_' + id + '" type="text"\
-                     class="quantity" name="qty[]" value="1" style="text-align:\
-                      center;height:30px;"\
+                    <td style="text-align:center;width:15%;" class="appenTd"><input id="qty_' + id + '" type="text"\
+                     class="quantity form-control" name="qty[]" value="1" style="text-align: center;height:30px;"\
                       >\n\
                     <input id="productID_' + id + '" name="productID[]" value="' + id + '" type="hidden">\n\
                      <input id="inventory_' + id + '" name="invantory[]" value="' + inventory + '" type="hidden">\n\
@@ -156,9 +156,10 @@ var addRowProduct = function (id, inventory, price, value,  productCode,unit_sal
             var id = id_arr.split("_");
             var element_id = id[id.length - 1];
             var inventory = parseFloat($("#inventory_" + element_id).val());
+            console.log(inventory);
             var price = parseFloat($("#price_" + element_id).val());
             if(!isNaN(inventory) && !isNaN(quantity) && ( quantity > inventory) ){
-                var stockmessage='Expected Qty is out of stock';
+                var stockmessage='Expected e Qty is out of stock';
                 $("#qty_" + element_id).val('1');
                 $("#sub_total_" + element_id).val((price * 1).toFixed(2));
                 $("#qty_empty_" + element_id).html(stockmessage);
@@ -267,7 +268,7 @@ var addRowProduct = function (id, inventory, price, value,  productCode,unit_sal
 
         $("#confirmModal").on("click", function (e) {
             $("#show_error_save_main").html('');
-            var customerId = $("#cst_id").val();
+            var customerId=$('#cst_id').text();
             var allAreRunningCustomer = $('input[name="allAreRunningCustomer"]:checked').val();
             // console.log(allAreRunningCustomer);
             if (customerId == ''  &&  typeof allAreRunningCustomer=='undefined') {
@@ -276,8 +277,7 @@ var addRowProduct = function (id, inventory, price, value,  productCode,unit_sal
             } else {
                 $("#emptyMember").hide('blind', {}, 500)
                 $("#salesConfirmModal").modal("show");
-    
-                var name = $("#showName").html();
+
                 var subAmount = $("#totalAmount").val();
                 var paidNow = $("#paidNow").val();
                 var currentDueAmount = $("#currentDueAmount").val();
@@ -305,7 +305,7 @@ var addRowProduct = function (id, inventory, price, value,  productCode,unit_sal
                     var totalCustomerDueT=totalCustomerDue;
                 }
 
-                $("#showConfirmName").html(name);
+                $("#showConfirmName").html(customerId);
                 $("#showNetTotal").html(subAmount);
                 $("#showPaymentAmount").html(paidNowAmount);
                 $("#showCurrentDueAmount").html(currentDueAmountT);
@@ -421,4 +421,32 @@ $('.payment_ctg_amount').keyup(function () {
     });
     $("#paidNow").val(row_total_info);
     findTotal();
+});
+$(document).ready(function () {
+    $(".customerNameDD").select2({
+        placeholder: "Search Customer Information",
+        minimumInputLength: 3,
+        width: "100%",
+        ajax: {
+            url: base_url + "shipment_info/customerNameSuggestion",
+            dataType: "json",
+            type: "GET",
+            data: function (request) {
+                return {
+                    term: request.term,
+                };
+            },
+            processResults: function (data) {
+                console.log(data);
+                return {
+                    results: $.map(data, function (item) {
+                        return {
+                            text: item.value,
+                            id: item.id,
+                        };
+                    }),
+                };
+            },
+        },
+    });
 });

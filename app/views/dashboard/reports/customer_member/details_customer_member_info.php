@@ -2,10 +2,10 @@
     <div class="row">
         <div class="box-body" id="alert" style="display: none;"> <div class="callout callout-info"><span
                     id="show_message"></span></div></div>
-        <div class="col-md-12">
+        <div>
             <div class="box no-border" >
                 <div class="box-header">
-                    <h3 class="box-title">  <?php echo !empty($title)?$title:'' ?></h3>
+                    <h3 class="box-title">  Customer Ledger </h3>
                     <button class="btn btn-warning btn-sm pull-right no-print"  onclick="goBack()" ><i
                             class="glyphicon glyphicon-backward"></i> Back</button>
                     <button class="btn btn-primary btn-sm pull-right no-print" style="margin-right:5px;"
@@ -49,67 +49,74 @@
                     <table  class="table-style width100per" >
                         <thead>
                         <tr>
-                            <th> SL</th>
-                            <th> Date</th>
-                            <th> Payment By</th>
-                            <th> Debit</th>
-                            <th> Credit</th>
-                            <th> Balance </th>
+                            <th class="width5per"> SL</th>
+                            <th class="width10per"> Date</th>
+                            <th > Remarks</th>
+                            <th class="width20per"> Debit </th>
+                            <th class="width20per"> Credit</th>
+                            <th class="width20per"> Balance </th>
                             <th class="no-print" style="width: 10%;">Action</th>
                         </tr>
                         </thead>
                         <tbody>
                         <?php
+                        $i=1;
+                        $tDebit     =   '0.00';
+                        $tCredit    =   '0.00';
                         if(!empty($info)){
-                            $i=1;
-                            $tDebit='0.00';
-                            $tCredit='0.00';
                             foreach ($info as $row) {
                                 ?>
                                 <tr>
                                     <td><?php echo $i++; ?></td>
                                     <td class="text-left">
-                                        <?php echo (!empty($row->sales_date)?date('d M, Y',strtotime
-                                        ($row->sales_date)):(!empty($row->payment_date)?date('d M, Y',strtotime($row->payment_date)):''));
+                                        <?php
+                                            echo (!empty($row->sales_date)?date('d M, Y',strtotime($row->sales_date)):(!empty($row->payment_date)?date('d M, Y
+                                            ',strtotime($row->payment_date)):''));
                                         ?>
                                     </td>
-                                    <td class="text-left"><?php  $paymentBy=!empty($row->payment_by)?json_decode
-                                        ($row->payment_by,true):'';  ?>
-                                        <table class="table-style width100per"  >
-                                            <?php
-                                            $paymentKey=[
-                                                'cash'=>'Cash',
-                                                'cash_cheque'=>'Cash Cheque',
-                                                'due_cheque'=>'Due Cheque',
-                                                'online_payment'=>'Online Payment',
-                                            ];
-                                            if(!empty($paymentBy)){
-                                                foreach ($paymentBy as $key=> $value){
-                                                    ?>
-                                                    <tr>
-                                                        <td style="padding-right:8px; " class="text-left
-                                                        width70per">
-                                                            <?php
-                                                            echo
-                                                            !empty
-                                                            ($paymentKey[$key])
-                                                                ?$paymentKey[$key]:''; ?>
-                                                        </td>
-                                                        <td style="width:33%;">
-                                                            <?php echo (($value>0)? number_format($value,2):'0.00') ?>
-                                                        </td>
-                                                    </tr>
-                                                <?php } } ?>
-                                            </table>
+                                    <td class="text-left">
+                                        <?php
+                                    //    $paymentBy=(!empty($row->payment_by)?json_decode($row->payment_by,true):'');  ?>
+<!--                                        <table class="table-style width100per"  >-->
+<!--                                            --><?php
+//                                            $paymentKey=[
+//                                                'cash'=>'Cash',
+//                                                'cash_cheque'=>'Cash Cheque',
+//                                                'due_cheque'=>'Due Cheque',
+//                                                'online_payment'=>'Online Payment',
+//                                            ];
+//                                            if(!empty($paymentBy)){
+//                                                foreach ($paymentBy as $key=> $value){
+//                                                    ?>
+<!--                                                    <tr>-->
+<!--                                                        <td style="padding-right:8px; " class="text-left-->
+<!--                                                        width70per">-->
+<!--                                                            --><?php
+//                                                            echo
+//                                                            !empty
+//                                                            ($paymentKey[$key])
+//                                                                ?$paymentKey[$key]:''; ?><!--</td>-->
+<!--                                                        <td style="width:33%;">-->
+<!--                                                            --><?php //echo (!empty($value)?number_format($value,2):'0
+//                                                            .00') ?>
+<!--                                                        </td>-->
+<!--                                                    </tr>-->
+<!--                                                --><?php //} } ?>
+<!--                                            </table>-->
+                                        <?php
+                                        echo (!empty($transactionType[$row->type])?$transactionType[$row->type]:'');
+                                        echo (!empty($row->remarks)?" - ".$row->remarks:'')
+                                        ?>
                                     </td>
+                                    <td class="text-right"><?php echo !empty($row->credit_amount)
+                                            ?number_format($row->credit_amount,2):'0.00';
+                                        $tCredit+=$row->credit_amount; ?></td>
                                     <td class="text-right"><?php echo !empty($row->debit_amount)
                                             ?number_format($row->debit_amount,2):'0.00'; $tDebit+=$row->debit_amount;
                                     ?></td>
-                                    <td class="text-right"><?php echo !empty($row->credit_amount)
-                                            ?number_format($row->credit_amount,2):'0.00';
-                                            $tCredit+=$row->credit_amount; ?></td>
-                                    <td class="text-right"><?php echo (!empty($tDebit-$tCredit)?number_format
-                                        ($tDebit-$tCredit,2):'0.00')
+
+                                    <td class="text-right"><?php echo (!empty($tCredit-$tDebit)?number_format
+                                        ($tCredit-$tDebit,2):'0.00')
                                         ?></td>
                                     <td class="no-print">
                                         <?php
@@ -117,7 +124,7 @@
                                         ?>
                                         <a target="_blank" href="<?php echo base_url('pos/show/'.$row->sales_id)
                                         ?>" class="btn btn-info btn-xs" title="Details"><i
-                                                class="glyphicon glyphicon-share-alt"></i></a>
+                                                class="glyphicon glyphicon-share-alt"></i> Invoice</a>
                                         <?php } ?>
                                     </td>
 

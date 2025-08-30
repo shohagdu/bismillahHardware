@@ -2,7 +2,7 @@
     <div class="row">
         <div class="box-body" id="alert" style="display: none;"> <div class="callout callout-info"><span
                         id="show_message"></span></div></div>
-        <div class="col-md-12">
+        <div >
             <div class="box">
                 <div class="box-header">
                     <h3 class="box-title">  <?php echo !empty($title)?$title:'' ?></h3>
@@ -11,21 +11,6 @@
                 </div>
                 <form action="" method="post" id="inventoryReportForm">
                     <div class="form-group no-print">
-                        <?php
-                        if($this->outletType=='main'){
-                            ?>
-                            <div class="col-sm-2">
-                                <label>Outlet</label>
-                                <div class="clearfix"></div>
-                                <select id="outletID" name="outletID" class="form-control" required style="width:
-                                100%;">
-                                    <option value="">Select Outlet</option>
-                                    <?php if(!empty($outlet_info)){ foreach ($outlet_info as $outlet) { ?>
-                                        <option value="<?php echo $outlet->id; ?>"><?php echo $outlet->name; ?></option>
-                                    <?php } }?>
-                                </select>
-                            </div>
-                        <?php } ?>
                         <div class="col-sm-3">
                             <label>Product Name/Code</label>
                             <div class="clearfix"></div>
@@ -63,13 +48,13 @@
 
                                 <tr>
                                     <td class="font-weight-bold"> SL</td>
-                                    <td class="font-weight-bold"> Product name</td>
-                                    <td class="font-weight-bold"> Stock In(Opening+In) </td>
-                                    <td class="font-weight-bold"> Stock Out (Sale+Transfer)</td>
+                                    <td class="font-weight-bold width30per"> Product name</td>
+                                    <td class="font-weight-bold">In(Op+In) </td>
+                                    <td class="font-weight-bold">Out(S+T)</td>
                                     <td class="font-weight-bold" >Balance</td>
-                                    <td class="font-weight-bold" nowrap="" >Purchase / Sale Price</td>
-                                    <td class="font-weight-bold" >Total Purchase Amount</td>
-                                    <td class="font-weight-bold" >Total Sale Amount</td>
+                                    <td class="font-weight-bold width20per" nowrap="" >Purchase/Sale </td>
+                                    <td class="font-weight-bold" >T. Pur. </td>
+                                    <td class="font-weight-bold" >T. Sale </td>
                                     <td class="no-print font-weight-bold " style="width: 10%;">Action</td>
                                 </tr>
                                 </thead>
@@ -81,6 +66,7 @@
                                 $stockQty=0;
                                 if(!empty($info)){
                                     foreach ($info as $row) {
+                                        if($row->current_stock_item>0){
                                         ?>
                                         <tr>
                                             <td><?php echo $i++; ?></td>
@@ -90,7 +76,7 @@
                                             <td><i class="badge"><?php echo $stock= $row->current_stock_item; $stockQty+=$stock ?></i></td>
                                             <td>
                                                 <i class="badge bg-red"><?php echo (!empty($row->purchase_price)?$row->purchase_price:'0.00'); ?></i>
-                                                <i class="badge"> / </i>
+                                               /
                                                 <i class="badge bg-green"><?php echo (!empty($row->unit_sale_price)?$row->unit_sale_price:'0.00'); ?></i>
 
                                                </td>
@@ -108,6 +94,7 @@
 
                                         </tr>
                                         <?php
+                                        }
                                     }
                                 }
                                 ?>

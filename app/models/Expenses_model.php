@@ -53,7 +53,8 @@ class Expenses_model extends CI_Model {
         }
         $this->db->join('all_settings_info as expenseCtg', 'expenseCtg.id = transaction_info.expense_ctg', 'left');
         $this->db->join('transaction_info as fromExpBank', 'fromExpBank.parent_id = transaction_info.id', 'inner');
-        $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = fromExpBank.bank_id', 'left');
+         $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = fromExpBank.bank_id', 'left');
+
         $this->db->order_by("transaction_info.id", "DESC");
         $this->db->limit($rowperpage, $start);
         $records = $this->db->get('transaction_info')->result();
@@ -61,20 +62,16 @@ class Expenses_model extends CI_Model {
         $i=(!empty($start)?$start+1:1);
         if(!empty($records)) {
             foreach ($records as $key => $record) {
-                $action='';
                 $data[] = $record;
                 $data[$key]->serial_no = (int) $i++;
                 $data[$key]->is_active =  ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
-                $action .= ' 
+                $data[$key]->action = ' 
                 <!--
                 <a href="'. base_url('pos/show/'.$record->id).'" class="btn btn-info  btn-xs"   ><i  class="glyphicon glyphicon-share-alt"></i> View</a> 
                 -->
-                <a href="'. base_url('expenses/edit/'.sha1($record->id)).'"  class="btn btn-primary  btn-xs"  ><i  class="glyphicon glyphicon-pencil"></i> Edit</a>';
-                if ($this->session->userdata('abhinvoiser_1_1_role') == 'superadmin') {
-                    $action .= ' <button onclick="deleteExpensesInformation(' . $record->id . ')"  type="button" class="btn btn-danger  btn-xs"   ><i  class="glyphicon glyphicon-remove"></i> Delete</button> ';
-                }
-
-                $data[$key]->action = $action;
+                <a href="'. base_url('expenses/edit/'.sha1($record->id)).'"  class="btn btn-primary  btn-xs"  ><i  class="glyphicon glyphicon-pencil"></i> Edit</a> 
+                
+                <button onclick="deleteExpensesInformation('.$record->id.')"  type="button" class="btn btn-danger  btn-xs"   ><i  class="glyphicon glyphicon-remove"></i> Delete</button> ';
             }
         }
         ## Response

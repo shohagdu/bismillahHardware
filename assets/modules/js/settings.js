@@ -40,7 +40,14 @@ $(function () {
         }
     });
 
-    $(".dateRangeReservation").val('');
+    $("#supplierNameSearch").autocomplete({
+        source: base_url+"Pos/getSupplierName",
+        select: function(event, ui) {
+            $("#supplierNameSearchId").val(ui.item.id);
+            $("#supplierNameSearch").val(ui.item.value);
+            return false;
+        }
+    });
 });
 function get_element_id(id_arr){
     var id = id_arr.split("_");
@@ -189,7 +196,7 @@ function updateProductInfo(productid) {
                 $("#productNameShow").val(data.name);
                 $("#productBrand").val(data.band_id);
                 $("#productSource").val(data.source_id);
-                $("#productType").val(data.ProductTypeTitle);
+                $("#productType").val(data.product_type);
                 $("#productUnit").val(data.unit_id);
                 $("#productPrice").val(data.unit_sale_price);
                 $("#productPurchasePrice").val(data.purchase_price);
@@ -265,14 +272,25 @@ function updateCustomerMemberInfo(id) {
         success: function (response) {
             if(response.status=='success'){
                 var data=response.data;
+                console.log(data);
                 $("#outlet_id").val(data.outlet_id);
                 $("#name").val(data.name);
                 $("#mobile").val(data.mobile);
                 $("#email").val(data.email);
                 $("#address").val(data.address);
                 $("#remarks").val(data.remarks);
+
                 $("#status").val(data.is_active);
                 $("#upId").val(data.id);
+                if(data.type==10){
+                    $("#openingBalanceType1").attr('checked',true);
+                    $("#openingBalanceType2").attr('checked',false);
+                    $("#openingDue").val(data.credit_amount);
+                }else if(data.type==9){
+                    $("#openingBalanceType1").attr('checked',false);
+                    $("#openingBalanceType2").attr('checked',true);
+                    $("#openingDue").val(data.debit_amount);
+                }
             }
         }
     });
@@ -292,21 +310,11 @@ function deleteCustomerMemberInfo(id,type) {
                 if (response.status == 'success') {
                     $("#alert").show();
                     $("#show_message").html(response.message);
-
-                    if(type==1) {
-                        setTimeout(function () {
-                            $("#alert").hide();
-                            $("#show_message").html('');
-                            $('#customerMemberInfo').DataTable().ajax.reload();
-                        }, 1500);
-                    }else{
-                        setTimeout(function () {
-                            $("#alert").hide();
-                            $("#show_message").html('');
-                            $('#MemberInfo').DataTable().ajax.reload();
-                        }, 1500);
-                    }
-
+                    setTimeout(function () {
+                        $("#alert").hide();
+                        $("#show_message").html('');
+                        $('#MemberInfo').DataTable().ajax.reload();
+                    }, 1500);
                 } else {
                     $("#alert").show();
                     $("#show_message").html(response.message);
@@ -318,6 +326,8 @@ function deleteCustomerMemberInfo(id,type) {
             }
         });
     }
+
+
 }
 function saveCustomerMemberInfo() {
     $(".submit_btn").attr("disabled", true);
@@ -368,7 +378,6 @@ $(document).ready(function(){
             { data: 'ProductTypeTitle', name: 'productType.ProductTypeTitle'},
             { data: 'unitTitle',  name: 'unitInfo.unitTitle'},
             { data: 'unit_sale_price', name: 'product_info.unit_sale_price' },
-            { data: 'current_stock_item', orderable: true, searchable: false },
             { data: 'is_active', name: 'product_info.is_active' },
             { data: 'action',orderable: false, searchable: false },
         ]
@@ -435,7 +444,6 @@ $(document).ready(function(){
             { data: 'email', name: 'customer_shipment_member_info.email'},
             { data: 'address', name: 'customer_shipment_member_info.address'},
             { data: 'remarks', name: 'customer_shipment_member_info.remarks'},
-            { data: 'current_stock', name: 't.current_stock' },
             { data: 'current_due', name: 't.current_due' },
             { data: 'is_active', name: 'customer_shipment_member_info.is_active' },
             { data: 'action',orderable: false, searchable: false },
@@ -446,88 +454,7 @@ $(document).ready(function(){
         MemberInfoTable.draw();
     });
 
-    // Expense Calculation
-    var expenseInfoTBL = $('#expenseInfoTBL').DataTable({
-        'processing': true,
-        'serverSide': true,
-        'serverMethod': 'post',
-        //'searching': false, // Remove default Search Control
-        'ajax': {
-            'url':  base_url +"Expenses/showExpensesInfo",
-            'data': function(data){
-                data.expenseCtg = $('#expenseCtg').val();
-                data.bankID = $('#bankID').val();
-                // data.dateRange = $('#reservation').val();
-            }
-        },
-        'columns': [
-            { data: 'serial_no', orderable: true, searchable: false  },
-            { data: 'payment_date', name: 'transaction_info.payment_date' },
-            { data: 'expenseCtgTitle', name: 'transaction_info.expenseCtgTitle' },
-            { data: 'accountName', name: 'transaction_info.accountName' },
-            { data: 'debit_amount', name: 'transaction_info.debit_amount' },
-            { data: 'remarks', name: 'transaction_info.remarks'},
-            { data: 'action',orderable: false, searchable: false },
-        ]
-    });
-    $('#expenseCtg,#bankID,#reservation').change(function(){
-        expenseInfoTBL.draw();
-    });
-
-    // Transaction History
-    var transferHitoryTBL = $('#transferHitoryTBL').DataTable({
-        'processing': true,
-        'serverSide': true,
-        'serverMethod': 'post',
-        //'searching': false, // Remove default Search Control
-        'ajax': {
-            'url':  base_url +"Cashbook/showTransferInfo",
-            'data': function(data){
-                data.expenseCtg     = $('#expenseCtg').val();
-                data.bankID         = $('#bankID').val();
-                // data.dateRange = $('#reservation').val();
-            }
-        },
-        'columns': [
-            { data: 'serial_no', orderable: true, searchable: false  },
-            { data: 'payment_date', name: 'transaction_info.payment_date' },
-            { data: 'fromBankName', name: 'transaction_info.fromBankName' },
-            { data: 'accountName', name: 'transaction_info.accountName' },
-            { data: 'debit_amount', name: 'transaction_info.debit_amount' },
-            { data: 'remarks', name: 'transaction_info.remarks'},
-            { data: 'action',orderable: false, searchable: false },
-        ]
-    });
-    $('#expenseCtg,#bankID,#reservation').change(function(){
-        transferHitoryTBL.draw();
-    });
-
-    // Transaction
-    var transactionTBL = $('#transactionTBL').DataTable({
-        'processing': true,
-        'serverSide': true,
-        'serverMethod': 'post',
-        //'searching': false, // Remove default Search Control
-        'ajax': {
-            'url':  base_url +"Cashbook/showTransactionInfo",
-            'data': function(data){
-                data.bankID         = $('#bankID').val();
-                data.dateRange      = $('#reservation').val();
-            }
-        },
-        'columns': [
-            { data: 'serial_no', orderable: true, searchable: false  },
-            { data: 'accountName', name: 'tbl_pos_accounts.accountName' },
-            { data: 'payment_date_title', name: 'transaction_info.payment_date' },
-            { data: 'transType', name: 'transaction_info.type' },
-            { data: 'transAmount', name: 'transaction_info.debit_amount' },
-            { data: 'remarks', name: 'transaction_info.remarks'},
-            { data: 'action',orderable: false, searchable: false },
-        ]
-    });
-    $('#bankID,#reservation').change(function(){
-        transactionTBL.draw();
-    });
+    
 
     //outlet information....
     var outletInfoTable = $('#outletInfo').DataTable({
@@ -572,9 +499,11 @@ $(document).ready(function(){
         },
         'columns': [
             { data: 'serial_no', orderable: true, searchable: false  },
+            { data: 'supplierName', name: 'customer_shipment_member_info.supplierName',searchable: false },
             { data: 'purchase_id', name: 'purchase_info_stock_in.purchase_id' },
             { data: 'purchase_date', name: 'purchase_info_stock_in.purchase_date' },
             { data: 'productInfo', name: 'product_info.productCode' },
+            { data: 'amount', name: 'transaction_info.amount'},
             { data: 'note', name: 'purchase_info_stock_in.note'},
             { data: 'action',orderable: false, searchable: false },
         ]
@@ -585,7 +514,6 @@ $(document).ready(function(){
     });
 
     // todo:: sales list information
-
     var SalesInfoTable = $('#SalesInfo').DataTable({
         'processing': true,
         'serverSide': true,
@@ -594,7 +522,7 @@ $(document).ready(function(){
         'ajax': {
             'url':  base_url +"pos/showAllSalesInfo",
             'data': function(data){
-                data.customerID = $('#customerID_11').val();
+                data.customerID = $('#customerName_11').val();
                 data.saleNo = $('#salesID').val();
                 data.dateRange = $('#reservation').val();
             }
@@ -738,9 +666,9 @@ $(document).ready(function(){
         'columns': [
             { data: 'serial_no', orderable: true, searchable: false  },
             { data: 'member_name', name: 'member.member_name' },
-            { data: 'trans_date', name: 'shipment_stock_details.trans_date' },
-            { data: 'credit_amount', name: 'shipment_stock_details.credit_amount' },
-            { data: 'remarks', name: 'shipment_stock_details.remarks' },
+            { data: 'payment_date', name: 'transaction_info.payment_date' },
+            { data: 'credit_amount', name: 'transaction_info.credit_amount' },
+            { data: 'remarks', name: 'transaction_info.remarks' },
             { data: 'action',orderable: false, searchable: false },
         ]
     });
@@ -758,22 +686,81 @@ $(document).ready(function(){
         'ajax': {
             'url':  base_url +"settings/showAllCustomerDueCollectionInfo",
             'data': function(data){
-                data.customerID = $('#customerName_1').val();
+                data.customerID             = $('#searchCustomerId').val();
+                data.transactionType        = $('#searchTransactionType').val();
             }
         },
         'columns': [
             { data: 'serial_no', orderable: true, searchable: false  },
+            { data: 'transCode', name: 'member.transCode' },
             { data: 'customer_info', name: 'member.customer_info' },
+            { data: 'transType', name: 'member.transType' },
             { data: 'payment_date', name: 'transaction_info.payment_date' },
-            { data: 'typeTitle', name: 'transaction_info.typeTitle' },
-            { data: 'credit_amount', name: 'transaction_info.credit_amount' },
+            { data: 'amount', name: 'transaction_info.debit_amount' },
             { data: 'remarks', name: 'transaction_info.remarks' },
             { data: 'action',orderable: false, searchable: false },
         ]
     });
 
-    $('#customerName_1').blur(function(){
+    $('#searchCustomerId,#searchTransactionType').change(function(){
         customerDueCollectionInfoTable.draw();
+    });
+
+
+    // Expense Calculation
+    var expenseInfoTBL = $('#expenseInfoTBL').DataTable({
+        'processing': true,
+        'serverSide': true,
+        'serverMethod': 'post',
+        //'searching': false, // Remove default Search Control
+        'ajax': {
+            'url':  base_url +"Expenses/showExpensesInfo",
+            'data': function(data){
+                data.expenseCtg = $('#expenseCtg').val();
+                data.bankID = $('#bankID').val();
+                // data.dateRange = $('#reservation').val();
+            }
+        },
+        'columns': [
+            { data: 'serial_no', orderable: true, searchable: false  },
+            { data: 'payment_date', name: 'transaction_info.payment_date' },
+            { data: 'expenseCtgTitle', name: 'transaction_info.expenseCtgTitle' },
+            { data: 'accountName', name: 'transaction_info.accountName' },
+            { data: 'debit_amount', name: 'transaction_info.debit_amount' },
+            { data: 'remarks', name: 'transaction_info.remarks'},
+            { data: 'action',orderable: false, searchable: false },
+        ]
+    });
+    $('#expenseCtg,#bankID,#reservation').change(function(){
+        expenseInfoTBL.draw();
+    });
+
+    // Transaction History
+    var transferHitoryTBL = $('#transferHitoryTBL').DataTable({
+        'processing': true,
+        'serverSide': true,
+        'serverMethod': 'post',
+        //'searching': false, // Remove default Search Control
+        'ajax': {
+            'url':  base_url +"Cashbook/showTransferInfo",
+            'data': function(data){
+                data.expenseCtg     = $('#expenseCtg').val();
+                data.bankID         = $('#bankID').val();
+                // data.dateRange = $('#reservation').val();
+            }
+        },
+        'columns': [
+            { data: 'serial_no', orderable: true, searchable: false  },
+            { data: 'payment_date', name: 'transaction_info.payment_date' },
+            { data: 'fromBankName', name: 'transaction_info.fromBankName' },
+            { data: 'accountName', name: 'transaction_info.accountName' },
+            { data: 'debit_amount', name: 'transaction_info.debit_amount' },
+            { data: 'remarks', name: 'transaction_info.remarks'},
+            { data: 'action',orderable: false, searchable: false },
+        ]
+    });
+    $('#expenseCtg,#bankID,#reservation').change(function(){
+        transferHitoryTBL.draw();
     });
 
 
@@ -862,9 +849,9 @@ function saveOutletInfo() {
         $("#purchaseNo").val('SIN-'+randomString(6));
         $("#tranferNo").val('TNO-'+randomString(6));
     });
-    
-    var scntDiv = $('#tableDynamic');
-    var iStockIN = $('#tableDynamic tr').size() + 1;
+
+    var scntDiv = $('#tableDynamicPurchase');
+    var iStockIN = $('#tableDynamicPurchase tr').size() + 1;
     $('#addRowStockIn').on('click', function () {
         $(`<tr>
         <td>${iStockIN}</td>
@@ -893,7 +880,7 @@ function saveOutletInfo() {
         iStockIN++;
         return false;
     });
-         
+
 
     $(document).on("click", ".deleteRow", function (e) {
         if ($('#tableDynamic tr').size() > 1) {
@@ -1107,6 +1094,7 @@ $(".memberName").autocomplete({
         return false;
     }
 });
+
 $(".customerName").autocomplete({
     source: base_url+ "shipment_info/customerNameSuggestion",
     select: function (event, ui) {
@@ -1118,6 +1106,62 @@ $(".customerName").autocomplete({
         return false;
     }
 });
+$(document).ready(function () {
+    $(".customerNameDD").select2({
+        placeholder: "Search Customer Information",
+        minimumInputLength: 3,
+        width: "100%",
+        ajax: {
+            url: base_url + "shipment_info/customerNameSuggestion",
+            dataType: "json",
+            type: "GET",
+            data: function (request) {
+                return {
+                    term: request.term,
+                };
+            },
+            processResults: function (data) {
+                return {
+                    results: $.map(data, function (item) {
+                        return {
+                            text: item.value,
+                            id: item.id,
+                        };
+                    }),
+                };
+            },
+        },
+    });
+    $(".memberNameDD").select2({
+        placeholder: "Search Supplier Information",
+        minimumInputLength: 3,
+        width: "100%",
+        ajax: {
+            url: base_url + "shipment_info/memberNameSuggestion",
+            dataType: "json",
+            type: "GET",
+            data: function (request) {
+                return {
+                    term: request.term,
+                };
+            },
+            processResults: function (data) {
+                console.log(data);
+                return {
+                    results: $.map(data, function (item) {
+                        return {
+                            text: item.value,
+                            id: item.id,
+                        };
+                    }),
+                };
+            },
+        },
+    });
+
+
+});
+
 //shipment member application
 function shipmentTotalCal() {
     if ($("#tableDynamicShipment tr").size() == 0) {
@@ -1296,6 +1340,14 @@ function addMemberDueCollection() {
     $("#MemberDueCollectionForm")[0].reset();
     $("#show_label").html('Save');
     $("#alert_error").hide();
+    $(".dueAmount").show();
+    $(".currentDueAmount").show();
+
+    $(".transType" ).attr('checked', false);
+    $(".payment_ctg_amount").attr('readonly', true);
+    $("#cash_amount").attr('readonly', false);
+    $("#member_name_11").val('').trigger('change')
+
 }
 
 
@@ -1329,6 +1381,8 @@ function updatShipmentMemberDueCollection (id) {
     $("#MemberDueCollectionForm")[0].reset();
     $("#show_label").html('Update');
     $("#alert_error").hide();
+    $(".dueAmount").hide();
+    $(".currentDueAmount").hide();
     $.ajax({
         url: base_url +"shipment_info/get_single_shipment_delivery_info",
         data: {id: id},
@@ -1337,13 +1391,6 @@ function updatShipmentMemberDueCollection (id) {
         success: function (response) {
             if(response.status=='success'){
                 var data=response.data;
-                /*
-                    $("#cash").attr('checked',false);
-                    $("#cash_cheque").attr('checked',false);
-                    $("#due_cheque").attr('checked',false);
-                    $("#online").attr('checked',false);
-                */
-
                 var paymentBy= JSON.parse(data.payment_by);
                 $.each(paymentBy, function (key, value) {
                         $("#" + key).attr('checked', true);
@@ -1351,17 +1398,10 @@ function updatShipmentMemberDueCollection (id) {
                         $("#" + key + "_amount").val(value);
 
                 });
-
-
-
-                var current_due_ant=(parseFloat(data.present_due_amt)-parseFloat(data.credit_amount));
-                var currentStock=parseInt(data.present_stock_info)-parseInt(data.credit_qty);
-                $("#member_name_11").val(data.member_name+' ['+data.mobile+' ]');
-                $("#memberid_11").val(data.member_id);
-                $("#due_amount").val((data.present_due_amt).toFixed(2));
+                $("#accountID").html("<option value='"+data.bank_id+"'>"+data.bankName+"</option>");
+                $("#member_name_11").html("<option value='"+data.customer_member_id+"'>"+data.customerName+"</option>");
                 $("#paidNow").val(data.credit_amount);
-                $("#current_due_amount").val(current_due_ant.toFixed(2));
-                $("#delivery_date").val(data.trans_date);
+                $("#payment_date").val(data.payment_date_title);
                 $("#remarks").val(data.remarks);
                 $("#upId").val(data.id);
             }
@@ -1404,7 +1444,7 @@ function memberDueCal() {
 }
 
 $('#member_name_11').change(function(){
-    var member_id=$("#memberid_11").val();
+    var member_id=$(this).val();
     $("#paidNow").val('0.00');
     $(".payment_ctg_amount").val('');
     $("#current_due_amount").val('0.00');
@@ -1433,7 +1473,19 @@ $('#member_name_11').change(function(){
         }
     });
 });
+// Member Due Collection
+function addCustomerDueCollection() {
+    $("#customerDueCollectionForm")[0].reset();
+    $("#show_label").html('Save');
+    $("#alert_error").hide();
+    $(".amountClear").attr('readonly',true);
+    $(".receivedByChecked").attr('checked',false);
+    $(".paymentType").hide();
 
+    $("#accountID").val('').trigger('change');
+    $("#customerIdDD").val('').trigger('change');
+
+}
 $('#customerName_11').change(function(){
     var customer_id=$("#customerID_11").val();
     $("#paidNow").val('0.00');
@@ -1455,7 +1507,28 @@ $('#customerName_11').change(function(){
         }
     });
 });
-
+$('#customerIdDD').change(function(){
+    var customer_id=$("#customerIdDD").val();
+    console.log(customer_id);
+    $("#paidNow").val('0.00');
+    $(".payment_ctg_amount").val('');
+    $("#current_due_amount").val('0.00');
+    $.ajax({
+        url:  base_url +"reports/show_customer_due_amount/",
+        data: {customer_id:customer_id},
+        type: "POST",
+        dataType:'JSON',
+        success: function (response) {
+            if(response.status=='success'){
+                $("#due_amount").val(response.data);
+                $("#due_amount").attr('readonly',true);
+            }else{
+                $("#due_amount").val('0.00');
+                $("#due_amount").attr('readonly',false);
+            }
+        }
+    });
+});
 function saveCustomerDueCollection() {
     $(".submit_btn").attr("disabled", true);
     $.ajax({
@@ -1475,11 +1548,17 @@ function saveCustomerDueCollection() {
                 $("#show_message").html(response.message);
                 setTimeout(function(){
                     window.location = base_url +response.redirect_page;
+                   // customerDueCollectionInfoTable.ajax.refresh();
                 },1500);
 
             }
         }
     });
+}
+function updateCustomerDueCollection() {
+    $("#customerDueCollectionForm")[0].reset();
+    $("#show_label").html('Save');
+    $("#alert_error").hide();
 }
 
 $(document).on("click", ".deleteRowShipment", function (e) {
@@ -1626,10 +1705,10 @@ $(document).on("keyup", ".quantPurchase,.unitPrice ", function (event) {
 });
 
 function purchaseTotalCal() {
-    if ($("#tableDynamic tr").size() == 0) {
+    if ($("#tableDynamicPurchase tr").size() == 0) {
         return $("#net_purchase_amount").val(0);
     }
-    $("#tableDynamic tr").each(function () {
+    $("#tableDynamicPurchase tr").each(function () {
         row_total = 0;
         $(".totalPrice").each(function () {
             row_total += Number(parseFloat($(this).val()));
@@ -1672,7 +1751,6 @@ function searchingDailySalesStatement () {
 
 function deleteSalesInformation(id) {
     var confirmation = confirm("Are you sure you want to remove this Member?");
-
     if (confirmation) {
         $.ajax({
             url: base_url + "Pos/deleteSalesInfo",
@@ -1699,8 +1777,6 @@ function deleteSalesInformation(id) {
             }
         });
     }
-
-
 }
 
 $(".invoiceNumber").autocomplete({
@@ -1823,17 +1899,12 @@ function searchingDailyDetailsSalesReport () {
 
 
 var addRowProduct = function (product) {
+    console.log(product);
     var productID = $('#productID_'+ product.id).val();
     var productQuantity = parseInt($('#productQuantity_'+ product.id).val());
 
-    // if(productID == product.id){
-    //     return $('#productQuantity_'+ product.id).val(productQuantity + 1);
-    // }
-    var  pType='';
-    if(product.ProductTypeTitle==null ){
-        pType='';
-    }else{
-        pType=product.ProductTypeTitle;
+    if(productID == product.id){
+        return $('#productQuantity_'+ product.id).val(productQuantity + 1);
     }
 
     return $('<tr>\n\
@@ -1841,11 +1912,11 @@ var addRowProduct = function (product) {
 					<td style="width: 8%;">\n\
 						<input id="productQuantity_'+ product.id +'" type="text" class="form-control" name="productQuantity[]" value="1">\n\
 						<input type="hidden" class="form-control" name="productName[]" value="'+ product.productName +'">\n\
+						<input type="text" class="form-control" name="productType[]" value="'+ product.ProductTypeTitle +'">\n\
 						<input type="hidden" class="form-control" name="productCode[]" value="'+ product.productCode +'">\n\
 						<input type="hidden" class="form-control" name="productPrice[]" value="'+ product.unit_sale_price +'">\n\
 						<input id="productID_'+ product.id +'" type="hidden" class="form-control" name="productID[]" value="'+ product.id +'">\n\
 					</td>\n\
-					<td style="width: 20%;"><input type="text" class="form-control" name="productType[]" value="'+ pType +'">\n\</td>\n\
 					<td style="width: 20%;">'+ product.bandTitle +'</td>\n\
 					<td style="width: 2%;">\n\
 						<a href="javascript:void(0);" id="removeRow" class="btn btn-danger btn-xs"><i class="glyphicon glyphicon-trash"></i></a>\n\
@@ -1854,7 +1925,7 @@ var addRowProduct = function (product) {
 };
 
 
-$( "#productNameBarCode" ).autocomplete({
+$( "#productName" ).autocomplete({
     source: base_url+ "purchases/productNameSuggestions",
     response: function (event, ui) {
         if(ui.content){
@@ -1994,151 +2065,16 @@ $('.changeSearchProduct').click(function(){
     });
 });
 
-$(document).on("change", "#transTypeMember", function (event) {
-    var  type = $(this).val();
-    $(".creditAmountDiv").hide();
-    $(".creditAmount").html('');
-    $('#paidNow').attr('readonly', false);
-    if (type == 3 ) {
-        $(".creditAmountDiv").show();
-        $(".creditAmount").html('Payment Now');
-        $('#paidNow').attr('readonly', true);
+$('#accountType').change(function(){
+    var accountType = $('#accountType').val();
+    if(accountType == 'BANK'){
+        $('.accountNumber').fadeIn();
+        $('.branchName').fadeIn();
     }else{
-        $(".creditAmount").html('Manual Due Amount');
+        $('.accountNumber').fadeOut();
+        $('.branchName').fadeOut();
     }
 });
-
-$(document).on("keyup", "#paidNow", function (event) {
-    var  newDueAmt      = parseFloat($(this).val());
-    var totalDue        = parseFloat($("#due_amount").val());
-    if (!isNaN(totalDue) && !isNaN(newDueAmt)  ) {
-        var newTotalDue=(totalDue + newDueAmt);
-        $("#current_due_amount").val((newTotalDue).toFixed(2));
-    }else{
-        $("#current_due_amount").val('0.00');
-    }
-});
-// Member Due Collection
-function addCustomerDueCollection() {
-    $("#customerDueCollectionForm")[0].reset();
-    $("#show_label").html('Save');
-    $("#alert_error").hide();
-    $(".updateCollectionDiv").show();
-    $(".creditAmountDiv").show();
-}
-
-function updateDueCollectInfo (id) {
-    $("#customerDueCollectionForm")[0].reset();
-    $("#show_label").html('Update');
-    $("#alert_error").hide();
-
-    $(".creditAmountDiv").hide();
-    $(".creditAmount").html('');
-    $('#paidNow').attr('readonly', false);
-    $(".updateCollectionDiv").hide();
-    $.ajax({
-        url: base_url +"settings/getSingleTransactionInfo",
-        data: {id: id},
-        type: "POST",
-        dataType:'JSON',
-        success: function (response) {
-            if(response.status=='success'){
-                var data=response.data;
-
-                var paymentBy= JSON.parse(data.payment_by);
-                if(paymentBy!='' ) {
-                    $.each(paymentBy, function (key, value) {
-                        $("#" + key).attr('checked', true);
-                        $("#" + key + "_amount").attr('readonly', false);
-                        $("#" + key + "_amount").val(value);
-
-                    });
-
-
-                }
-                if(data.type==7){
-                    $(".creditAmount").html('Manual Due Amount');
-                    $("#paidNow").val(data.debit_amount);
-                }else if(data.type==3){
-                    $(".creditAmountDiv").show();
-                    $(".creditAmount").html('Payment Now');
-                    $('#paidNow').attr('readonly', true);
-                    $("#paidNow").val(data.credit_amount);
-                }
-                $("#customerName_11").val(data.customer_info);
-                $("#customerID_11").val(data.customer_member_id);
-                $("#transTypeMember").val(data.type);
-
-
-                $("#payment_date").val(data.payment_date_title);
-                $("#remarks").val(data.remarks);
-                $("#upId").val(data.id);
-            }
-        }
-    });
-
-}
-
-
-function deleteMemberDueCollectionInfo(id) {
-    var confirmation = confirm("Are you sure you want to delete this information?");
-    if (confirmation) {
-        $.ajax({
-            url: base_url + "settings/delete_due_collection",
-            data: {upId: id},
-            type: "POST",
-            dataType: 'JSON',
-            success: function (response) {
-                if (response.status == 'success') {
-                    $("#alert").show();
-                    $("#show_message").html(response.message);
-                    setTimeout(function () {
-                        $("#alert").hide();
-                        $("#show_message").html('');
-                        $('#customerDueCollectionInfo').DataTable().ajax.reload();
-                    }, 1500);
-                } else {
-                    $("#alert").show();
-                    $("#show_message").html(response.message);
-                    setTimeout(function () {
-                        $("#alert").hide();
-                        $("#show_message").html('');
-                    }, 3500);
-                }
-            }
-        });
-    }
-}
-
-function deleteProductInfo(id) {
-    var confirmation = confirm("Are you sure you want to delete this information?");
-    if (confirmation) {
-        $.ajax({
-            url: base_url + "products/deleteProductInfo",
-            data: {upId: id},
-            type: "POST",
-            dataType: 'JSON',
-            success: function (response) {
-                if (response.status == 'success') {
-                    $("#alert").show();
-                    $("#show_message").html(response.message);
-                    setTimeout(function () {
-                        $("#alert").hide();
-                        $("#show_message").html('');
-                        $('#ProductInfo').DataTable().ajax.reload();
-                    }, 1500);
-                } else {
-                    $("#alert").show();
-                    $("#show_message").html(response.message);
-                    setTimeout(function () {
-                        $("#alert").hide();
-                        $("#show_message").html('');
-                    }, 3500);
-                }
-            }
-        });
-    }
-}
 
 function saveExpenseInfo() {
     $("#alert_error").hide();
@@ -2146,7 +2082,7 @@ function saveExpenseInfo() {
     $("#show_error_save_info").html('');
     $("#show_message").html('');
 
-    $("#updateBtn").attr("disabled", true);
+     $("#updateBtn").attr("disabled", true);
     $.ajax({
         url:  base_url +"expenses/updateExpenseItem/",
         data: $('#expenseForm').serialize(),
@@ -2284,6 +2220,71 @@ function deleteBankTransferInformation(id) {
     }
 }
 
+$("#purchaseProductSearch").autocomplete({
+    source: function (request, response) {
+        $.getJSON(base_url+"pos/get_product_list_by_branch", {term: request.term},
+            response);
+    },
+    response: function (event, ui) {
+        if(ui.content){
+            if(ui.content.length == 1){
+                console.log(ui.content);
+                addRowProductPurchase(ui.content[0].id,ui.content[0].productPrice, ui.content[0].value,ui.content[0].productCode,ui.content[0].unit_sale_price);
+                $(this).val('');
+                $(this).focus();
+                $(this).autocomplete('close');
+                return false;
+            }
+        }
+
+    },
+    select: function (event, ui) {
+        addRowProductPurchase(ui.item.id, ui.item.productPrice, ui.item.value,ui.item.productCode,ui.item.unit_sale_price);
+        $(this).val('');
+        return false;
+    }
+
+});
+
+var scntDivPurchase = $('#tableDynamicPurchase');
+var iStockIN = $('#tableDynamicPurchase tr').size() + 1;
+
+function addRowProductPurchase(id,purchasePrice,productInfo,productCode,salePrice){
+    var pQty;
+    // todo: IF PRODUCT IS EXIST THEN AUTOMATIC ADD IN QUEUE START
+    var productID = parseFloat($('#productID_' + id).val());
+    var productPrice = parseFloat($("#unitPrice_" + id).val());
+    var productQuantity = parseInt($('#quantity_' + id).val());
+    if(isNaN(productQuantity)){
+        pQty=0;
+    }else{
+       pQty=productQuantity;
+    }
+
+    if (productID == id) {
+        $('#quantity_' + id).val(pQty + 1);
+        if (!isNaN(productPrice)) {
+            var total = (pQty + 1) * productPrice;
+            $('#totalPrice_' + id).val(total.toFixed(2));
+        }
+        return purchaseTotalCal();
+    }
+
+    $(`<tr>
+        <td>${iStockIN}</td>
+        <td style="font-weight: bold;font-size: 15px">
+            `+productInfo+`
+            <input type="hidden" name="productID[]"  value="`+id+`" id="productID_${id}" class="form-control">
+        </td>
+        <td><input type="text" required name="quantity[]" id="quantity_${id}" placeholder="Quantity" class="quantPurchase form-control only-number"></td>
+         <td><input type="text" required name="unitPrice[]" value="`+purchasePrice+`" id="unitPrice_${id}" placeholder="Unit Price" class="unitPrice form-control only-number"></td>
+         <td><input type="text" required name="totalPrice[]" readonly  tabindex="-1" id="totalPrice_${id}" placeholder="Total Price" class="totalPrice form-control only-number"></td>
+        <td><a href="javascript:void(0);" id="deleteRows_${id}"  class="deleteRowPurchase btn btn-danger  btn-sm"><i class="glyphicon glyphicon-remove"></i></a></td>
+    </tr>`).appendTo(scntDivPurchase);
+
+    iStockIN++;
+    return false;
+}
 
 function searchingAccountsStatementReports () {
     $(".search_btn").attr("disabled", true);
@@ -2299,22 +2300,108 @@ function searchingAccountsStatementReports () {
         }
     });
 }
+$("#transactionType").change(function () {
+    var transactionType = $(this).val();
+    $("#paidNow").attr('readonly',true);
+    $("#paidNow").val('0.00');
+    $("#current_due_amount").val('0.00');
+    $(".payment_ctg_amount").val('0.00');
+    $(".transTypeChange").hide();
+    $(".paymentType").hide();
+    $(".transAmount").html('Amount');
+   if(transactionType==3){
+        $(".transTypeChange").show();
+        $(".paymentType").show();
+   }else if(transactionType==11){
+       $(".transTypeChange").show();
+       $("#paidNow").attr('readonly',false);
+       $(".transAmount").html('Deposit Amount');
+   }else if(transactionType==12){
+        $("#paidNow").attr('readonly',false);
+        $(".transAmount").html('Discount Amount');
+   }
+});
 
-function searchingExpenseOverviewReports () {
-    // $(".search_btn").attr("disabled", true);
+$(document).on("keyup", "#paidNow", function (event) {
+    var transactionType     = $("#transactionType").val();
+    var paidNow             = parseFloat($(this).val());
+    var due_amount          = parseFloat($("#due_amount").val());
+    if(transactionType==11){
+        var presentDue = (due_amount + paidNow);
+    }else if(transactionType==12) {
+        var presentDue = (due_amount - paidNow);
+    }else{
+        presentDue='0.00';
+    }
+    if (!isNaN(presentDue)) {
+        $("#current_due_amount").val(presentDue.toFixed(2));
+    }else{
+        $("#current_due_amount" ).val('0.00');
+    }
+});
+function updateCustomerTransInfo(id){
+    $("#customerDueCollectionForm")[0].reset();
+    $("#show_label").html('Update');
+    $("#alert_error").hide();
+    $(".currentDueAmountDiv").hide();
+    $(".totalDueAmountDiv").hide();
+    $("#accountID").select2("val", '');
     $.ajax({
-        url:  base_url +"reports/searchingExpOverviewReports/",
-        data: $('#expReportForm').serialize(),
+        url:  base_url +"settings/showCustomerTransInfoViaID/",
+        data: {id:id},
         type: "POST",
+        dataType:'JSON',
         success: function (response) {
-            $(".search_btn").attr("disabled", false);
-            if(response!=''){
-                $("#infoDataShow").html(response);
+            if(response.status=='success'){
+                var data=response.data;
+
+                var transactionType = data.type;
+                $("#paidNow").attr('readonly',true);
+                $("#paidNow").val('0.00');
+
+                $("#current_due_amount").val('0.00');
+                $(".payment_ctg_amount").val('0.00');
+                $(".transTypeChange").hide();
+                $(".paymentType").hide();
+                $(".transAmount").html('Amount');
+
+                if(transactionType==3){
+                    $(".transTypeChange").show();
+                    $(".paymentType").show();
+                    $("#paidNow").val(data.debit_amount);
+                    $("#accountID").select2("val", data.bank_id);
+                    var paymentBy= JSON.parse(data.payment_by);
+                    $.each(paymentBy, function (key, value) {
+                        $("#" + key).attr('checked', true);
+                        $("#" + key + "_amount").attr('readonly', false);
+                        $("#" + key + "_amount").val(value);
+
+                    });
+                }else if(transactionType==11){
+                    $(".transTypeChange").show();
+                    $("#paidNow").attr('readonly',false);
+                    $(".transAmount").html('Deposit Amount');
+                    $("#paidNow").val(data.credit_amount);
+                    $("#accountID").select2("val", data.bank_id);
+                }else if(transactionType==12){
+                    $("#paidNow").attr('readonly',false);
+                    $(".transAmount").html('Discount Amount');
+                    $("#paidNow").val(data.debit_amount);
+                }
+                $("#transactionType").val(transactionType);
+                $("#customerIdDD").html("<option value='"+data.customer_member_id+"'>"+data.customerName+ " ["+data.customerMobile+"]</option>");
+                $("#payment_date").val(data.payment_date_title);
+                $("#remarks").val(data.remarks);
+                $("#upId").val(data.id);
+
+
+
+
             }
         }
     });
 }
-function searchingExpenseReports () {
+function searchingDailySalesReports () {
     $(".search_btn").attr("disabled", true);
     $.ajax({
         url:  base_url +"reports/searchingexpReports/",
@@ -2328,74 +2415,100 @@ function searchingExpenseReports () {
         }
     });
 }
-$('#accountType').change(function(){
-    var accountType = $('#accountType').val();
-    if(accountType == 'BANK'){
-        $('.accountNumber').fadeIn();
-        $('.branchName').fadeIn();
-    }else{
-        $('.accountNumber').fadeOut();
-        $('.branchName').fadeOut();
-    }
-})
 
-function addTransactionInfo() {
-    $("#transactionInfoForm")[0].reset();
-    $("#upId").val('');
-    $("#show_label").html('Save');
-    $(".submit_btn").attr("disabled", false);
-    $("#alert").hide();
-    $("#show_message").html('');
-    $(".updatedHideDiv").show();
-    $(".bank_id").val('').trigger("change");
-}
-function checkAvailableTransaction() {
-    var x = document.getElementById("availableAmount").value;
-    var y = document.getElementById("transAmount").value;
-    var z = document.getElementById("transType").value;
-    if ((parseInt(x) < parseInt(y)) && z==5  ) {
-        alert('Amount can not be greater then bank amount');
-        $("#transAmount").val('');
-        $("#accountCurrentAmount").val('');
-        return false;
-    }
-    if(z==5) {
-        var remainingVal = parseInt(x) - parseInt(y);
-        $("#accountCurrentAmount").val(remainingVal.toFixed(2));
-    }else if(z==4){
-        var remainingVal = parseInt(x) + parseInt(y);
-        $("#accountCurrentAmount").val(remainingVal.toFixed(2));
-    }
-}
-$('#transType').change(function(){
-    $("#transAmount").val('');
-    $("#accountCurrentAmount").val('');
+$(document).on("change", ".openingBalanceType", function () {
+   var type= $(this).val();
+   if(type==1){
+       $(".openingBalanceType").html('Due');
+   }else{
+       $(".openingBalanceType").html('Advanced');
+   }
 });
 
-function saveTransactionInfo() {
-     $(".submit_btn").attr("disabled", true);
+$(document).on("click", ".deleteRowPurchase", function (e) {
+    if ($('#tableDynamicPurchase tr').size() >= 1) {
+        var target = e.target;
+
+        var id_arr = $(this).attr('id');
+        var id = id_arr.split("_");
+        var element_id = id[id.length - 1];
+        $(target).closest('tr').remove();
+
+
+    } else {
+        //alert('One row should be present in table');
+    }
+});
+
+$('#install').change(function(){
+    var type = $('#install').val();
+    $('#installDiv').fadeOut();
+    $("#perInstall").val('0.00');
+    $("#duration").val('0.00');
+    if(type == 1){
+       $("#installDiv").fadeIn();
+    }else{
+    }
+});
+
+
+$(document).on("keyup", "#duration,#payableAmount", function (event) {
+    var  duration = parseFloat($("#duration").val());
+    var payableAmount = parseFloat($("#payableAmount").val());
+    var isInstall = $("#install").val();
+    if (!isNaN(duration) && !isNaN(payableAmount) && isInstall==1 ) {
+        var perMonths=(payableAmount / duration);
+        $("#perInstall").val((perMonths).toFixed(2));
+    }else{
+        $("#perInstall").val('0.00');
+    }
+});
+$(document).on("keyup", "#loan,#interest", function (event) {
+    var  loan                   = parseFloat($("#loan").val());
+    var interest                = parseFloat($("#interest").val());
+    if (!isNaN(loan) && !isNaN(interest)) {
+        var interestAmount  =   ((interest / 100)*loan);
+        $("#interestAmount").val((interestAmount).toFixed(2));
+        var payableAmnt= loan+interestAmount
+        $("#payableAmount").val((payableAmnt).toFixed(2));
+    }else{
+        $("#interestAmount").val('0.00');
+    }
+});
+$(document).on("keyup", "#interestAmount", function (event) {
+    var  loan                   = parseFloat($("#loan").val());
+    var interestAmount          = parseFloat($("#interestAmount").val());
+    if (!isNaN(loan) && !isNaN(interestAmount)) {
+        var payableAmnt= loan+interestAmount
+        $("#payableAmount").val((payableAmnt).toFixed(2));
+    }else{
+        $("#payableAmount").val('0.00');
+    }
+});
+
+function saveLoanInfo() {
+    $("#alert_error").hide();
+    $("#alert").hide();
+    $("#show_error_save_info").html('');
+    $("#show_message").html('');
+
+    $("#updateBtn").attr("disabled", true);
     $.ajax({
-        url:  base_url +"Cashbook/bankTransactionAction/",
-        data: $('#transactionInfoForm').serialize(),
+        url:  base_url +"loan/insertLoan/",
+        data: $('#loanForm').serialize(),
         type: "POST",
         dataType:'JSON',
         success: function (response) {
-            $(".submit_btn").attr("disabled", false);
-            if(response.status=='error'){
-                $("#alert_error").show();
-                $("#show_error_save").html(response.message);
-            }else{
-                $(".submit_btn").attr("disabled", true);
-                $("#transactionInfoForm")[0].reset();
 
+            if(response.status=='error'){
+                $("#updateBtn").attr("disabled", false);
+                $("#alert_error").show();
+                $("#show_error_save_info").html(response.message);
+            }else{
                 $("#alert").show();
                 $("#show_message").html(response.message);
                 setTimeout(function(){
-                    $("#alert").hide();
-                    $("#show_message").html('');
-
-                    $('#transactionModal').modal('hide');
-                    $('#transactionTBL').DataTable().ajax.reload();
+                    window.location = base_url + response.redirect_page;
                 },1500);
 
             }
@@ -2403,90 +2516,65 @@ function saveTransactionInfo() {
     });
 }
 
-function deleteTransactionInformation(id) {
-    var confirmation = confirm("Are you sure you want to remove this Member?");
+function saveLoanPayInfo() {
+    $("#alert_error").hide();
+    $("#alert").hide();
+    $("#show_error_save_info").html('');
+    $("#show_message").html('');
+
+    $("#updateBtn").attr("disabled", true);
+    $.ajax({
+        url:  base_url +"loan/insertPay/",
+        data: $('#loanPayform').serialize(),
+        type: "POST",
+        dataType:'JSON',
+        success: function (response) {
+
+            if(response.status=='error'){
+                $("#updateBtn").attr("disabled", false);
+                $("#alert_error").show();
+                $("#show_error_save_info").html(response.message);
+            }else{
+                $("#alert").show();
+                $("#show_message").html(response.message);
+                setTimeout(function(){
+                    window.location = base_url + response.redirect_page;
+                },1500);
+
+            }
+        }
+    });
+}
+
+function deleteLoanPay(id) {
+    var confirmation = confirm("Are you sure you want to remove this Pay Info?");
+
     if (confirmation) {
         $.ajax({
-            url: base_url + "Cashbook/deleteTransactionInfo",
+            url: base_url + "loan/deleteLoanPay",
             data: {id: id},
             type: "POST",
             dataType: 'JSON',
             success: function (response) {
                 if (response.status == 'success') {
-                    $("#alert_delete").show();
-                    $("#show_message_delete").html(response.message);
+                    $("#alert").show();
+                    $("#show_message").html(response.message);
                     setTimeout(function () {
-                        $("#alert_delete").hide();
-                        $("#show_message_delete").html('');
-                        $('#transactionTBL').DataTable().ajax.reload();
+                        $("#alert").hide();
+                        $("#show_message").html('');
+                        window.location = base_url + response.redirect_page;
                     }, 1500);
                 } else {
-                    $("#alert_delete").show();
-                    $("#show_message_delete").html(response.message);
+                    $("#alert").show();
+                    $("#show_message").html(response.message);
                     setTimeout(function () {
-                        $("#alert_delete").hide();
-                        $("#show_message_delete").html('');
+                        $("#alert").hide();
+                        $("#show_message").html('');
                     }, 3500);
                 }
             }
         });
     }
-}
 
-function updateTransactionInfo(id) {
-    $("#transactionInfoForm")[0].reset();
-    $("#upId").val('');
-    $("#show_label").html('Update');
-    $(".submit_btn").attr("disabled", true);
-    $("#alert").hide();
-    $("#show_message").html('');
-    $(".updatedHideDiv").hide();
-    $(".bank_id").val('').trigger("change");
 
-    $.ajax({
-        url: base_url +"settings/getSingleTransactionInfo",
-        data: {id: id},
-        type: "POST",
-        dataType:'JSON',
-        success: function (response) {
-            if(response.status=='success'){
-                $(".submit_btn").attr("disabled", false);
-                var data=response.data;
-                if(data.type==4){
-                    $("#transAmount").val(data.debit_amount);
-                }else if(data.type==5){
-                    $("#transAmount").val(data.credit_amount);
-                }
-                $(".bank_id").val(data.bank_id).trigger("change");
-                $("#transType").val(data.type);
-                $("#payment_date").val(data.payment_date_title);
-                $("#note").val(data.remarks);
-                $("#upId").val(data.id);
-            }
-        }
-    });
-}
-
-$("#productType").autocomplete({
-    source: base_url+ "Products/productTypeSuggestions",
-    select: function (event, ui) {
-        $("#productType").val(ui.item.value);
-        $("#productTypeID").val(ui.item.id);
-        return false;
-    }
-});
-
-function searchingBestSales () {
-    $(".submit_btn").attr("disabled", true);
-    $.ajax({
-        url:  base_url +"reports/searchingBestSales/",
-        data: $('#salesReportForm').serialize(),
-        type: "POST",
-        success: function (response) {
-            $(".submit_btn").attr("disabled", false);
-            if(response!=''){
-                $("#stock_info_data").html(response);
-            }
-        }
-    });
 }

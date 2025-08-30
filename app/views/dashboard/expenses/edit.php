@@ -19,8 +19,7 @@
                                     <select required name="head_id" class="form-control  select2"
                                             style="width: 100%;">
                                         <option value="">-- Select Expense Category --</option>
-                                        <?php if(!empty($expensehead)){
-                                            foreach ($expensehead as $expHead) { ?>
+                                        <?php if(!empty($expensehead)){ foreach ($expensehead as $expHead) { ?>
                                             <option value="<?php echo $expHead->id; ?>" <?php
                                             echo ((!empty($expenseInfo->expense_ctg) &&
                                             $expenseInfo->expense_ctg==$expHead->id)?"selected":'') ?>><?php echo $expHead->title; ?></option>
@@ -34,8 +33,7 @@
                                     <select required name="account_id" class="form-control select2 bank_id"
                                             style="width: 100%;">
                                         <option value="">-- Select Account --</option>
-                                        <?php if(!empty($account)){
-                                            foreach ($account as $eachaccount) { ?>
+                                        <?php if(!empty($account)){ foreach ($account as $eachaccount) { ?>
                                             <option value="<?php echo $eachaccount->accountID; ?>" <?php
                                             echo ((!empty($expenseInfo->expense_ctg) &&
                                                 $expenseInfo->expenseBankID==$eachaccount->accountID)?"selected":'') ?>><?php echo

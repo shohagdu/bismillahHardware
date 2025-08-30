@@ -7,104 +7,30 @@ class Reports_model extends CI_Model {
 
     function inventory_report($where=NULL,$outletID=NULL){
         //return 'hello';
-        $this->db->select('
-    product_info.id,
-    product_info.name,
-    product_info.productCode,
-    product_info.is_active,
-    band.title AS bandTitle,
-    source.title AS sourceTitle,
-    productType.title AS ProductTypeTitle,
-    unitInfo.title AS unitTitle,
-    product_info.purchase_price,
-    product_info.unit_sale_price
-', false);
-
-// Apply filtering condition
-        if (!empty($where)) {
+        $this->db->select('product_info.id,product_info.name,product_info.productCode,product_info.is_active,band.title as bandTitle,source.title as sourceTitle,productType.title as ProductTypeTitle,unitInfo.title as unitTitle,product_info.purchase_price,product_info.unit_sale_price',true);
+        if(!empty($where)) {
             $this->db->where($where);
         }
-
         $this->db->where('product_info.is_active', 1);
+        $this->db->join(' all_settings_info as band', 'band.id = product_info.band_id', 'left');
+        $this->db->join('all_settings_info as source', 'source.id = product_info.source_id', 'left');
+        $this->db->join(' all_settings_info as productType', 'productType.id = product_info.product_type', 'left');
+        $this->db->join(' all_settings_info as unitInfo', 'unitInfo.id = product_info.unit_id', 'left');
 
-// Optimize LEFT JOINs
-        $this->db->join('all_settings_info AS band', 'band.id = product_info.band_id', 'left');
-        $this->db->join('all_settings_info AS source', 'source.id = product_info.source_id', 'left');
-        $this->db->join('all_settings_info AS productType', 'productType.id = product_info.product_type', 'left');
-        $this->db->join('all_settings_info AS unitInfo', 'unitInfo.id = product_info.unit_id', 'left');
-
-// Optimize ORDER BY
-        $this->db->order_by("product_info.productCode ASC");
-
-// Add pagination (to improve performance)
-//        $this->db->limit($rowperpage, $start);
-
+        $this->db->order_by("product_info.name", "ASC");
+        $this->db->order_by("productCode", "ASC");
         $records = $this->db->get('product_info');
-
-        if ($records->num_rows() > 0) {
-            $result = $records->result();
-
-            // Fetch stock data for all products in one query
-            $productIds = array_column($result, 'id');
-
-            if (!empty($productIds)) {
-                $this->db->select('
-            stock_info.product_id,
-            SUM(CASE WHEN stock_info.debit_outlet = '.$this->db->escape($outletID).' THEN stock_info.total_item ELSE 0 END) AS total_debit,
-            SUM(CASE WHEN stock_info.credit_outlet = '.$this->db->escape($outletID).' THEN stock_info.total_item ELSE 0 END) AS total_credit
-        ', false);
-                $this->db->where_in('stock_info.product_id', $productIds);
-                $this->db->where('stock_info.is_active', 1);
-                $this->db->group_by('stock_info.product_id');
-                $stock_data = $this->db->get('stock_info')->result_array();
-
-                // Convert stock data into an associative array
-                $stockMap = [];
-                foreach ($stock_data as $stock) {
-                    $stockMap[$stock['product_id']] = [
-                        'debit'  => $stock['total_debit'],
-                        'credit' => $stock['total_credit']
-                    ];
-                }
-
-                // Assign stock values in a single loop
-                foreach ($result as $key => $product) {
-                    $debit  = isset($stockMap[$product->id]) ? $stockMap[$product->id]['debit'] : 0;
-                    $credit = isset($stockMap[$product->id]) ? $stockMap[$product->id]['credit'] : 0;
-                    $result[$key]->debit_item_info = $debit;
-                    $result[$key]->credit_item_info = $credit;
-                    $result[$key]->current_stock_item = $debit - $credit;
-                }
-            }
-
-            return $result;
-        } else {
+        if($records->num_rows()>0) {
+           $result = $records->result();
+           foreach ($result as $key => $product){
+               $result[$key]->debit_item_info=$this->stock_item_count(['stock_info.product_id'=>$product->id,'stock_info.debit_outlet'=>$outletID]);
+               $result[$key]->credit_item_info=$this->stock_item_count(['stock_info.product_id'=>$product->id,'stock_info.credit_outlet'=>$outletID]);
+               $result[$key]->current_stock_item=$result[$key]->debit_item_info-$result[$key]->credit_item_info;
+           }
+           return $result;
+        }else{
             return false;
         }
-
-
-//        $this->db->select('product_info.id,product_info.name,product_info.productCode,product_info.is_active,band.title as bandTitle,source.title as sourceTitle,productType.title as ProductTypeTitle,unitInfo.title as unitTitle,product_info.purchase_price,product_info.unit_sale_price');
-//        if(!empty($where)) {
-//            $this->db->where($where);
-//        }
-//        $this->db->where('product_info.is_active', 1);
-//        $this->db->join(' all_settings_info as band', 'band.id = product_info.band_id', 'left');
-//        $this->db->join('all_settings_info as source', 'source.id = product_info.source_id', 'left');
-//        $this->db->join(' all_settings_info as productType', 'productType.id = product_info.product_type', 'left');
-//        $this->db->join(' all_settings_info as unitInfo', 'unitInfo.id = product_info.unit_id', 'left');
-//        $this->db->order_by("productCode", "ASC");
-//        $records = $this->db->get('product_info');
-//        if($records->num_rows()>0) {
-//           $result = $records->result();
-//           foreach ($result as $key => $product){
-//               $result[$key]->debit_item_info=$this->stock_item_count(['stock_info.product_id'=>$product->id,'stock_info.debit_outlet'=>$outletID]);
-//               $result[$key]->credit_item_info=$this->stock_item_count(['stock_info.product_id'=>$product->id,'stock_info.credit_outlet'=>$outletID]);
-//               $result[$key]->current_stock_item=$result[$key]->debit_item_info-$result[$key]->credit_item_info;
-//           }
-//           return $result;
-//        }else{
-//            return false;
-//        }
     }
 
     public function stock_item_count($where){
@@ -122,12 +48,24 @@ class Reports_model extends CI_Model {
         }
     }
     public function get_transaction_info($where){
-        $this->db->select('transaction_info.*,sales_info.sales_date',true);
+        $this->db->select('transaction_info.*,sales_info.sales_date,customer_shipment_member_info.name as customerName,customer_shipment_member_info.mobile as customerMobile,customer_shipment_member_info.address,expense.title as expenseTitle,expenseBankInfo.bank_id as expenseBankID,tbl_pos_accounts.accountName as expenseBankName,tbl_pos_accounts.accountNumber',true);
+
+        if(!empty($where['firstDate']) && !empty($where['toDate']) ){
+            $this->db->where("transaction_info.payment_date >=", $where['firstDate']);
+            $this->db->where("transaction_info.payment_date <=", $where['toDate']);
+            unset($where['firstDate']);
+            unset($where['toDate']);
+        }
         if(!empty($where)) {
             $this->db->where($where);
         }
         $this->db->where('transaction_info.is_active', 1);
         $this->db->join('sales_info', 'sales_info.id = transaction_info.sales_id', 'left');
+
+        $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = transaction_info.customer_member_id', 'left');
+        $this->db->join('all_settings_info as expense', 'expense.id = transaction_info.expense_ctg AND transaction_info.type=8 AND  expense.type=7 ', 'left');
+        $this->db->join('transaction_info as expenseBankInfo', 'expenseBankInfo.parent_id = transaction_info.id AND expenseBankInfo.type=5', 'left');
+        $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = expenseBankInfo.bank_id', 'left');
         $this->db->order_by("transaction_info.id","ASC");
         $row_info = $this->db->get('transaction_info');
         if($row_info->num_rows()>0){
@@ -136,13 +74,32 @@ class Reports_model extends CI_Model {
             return  false;
         }
     }
+    public function get_single_transaction_info($where){
+        $this->db->select("transaction_info.*,sales_info.sales_date,customer_shipment_member_info.name as customerName,customer_shipment_member_info.mobile as customerMobile,customer_shipment_member_info.address,expense.title as expenseTitle,expenseBankInfo.bank_id as expenseBankID,,tbl_pos_accounts.accountName as bankName, DATE_FORMAT(transaction_info.payment_date, '%d-%m-%Y') AS payment_date_title",true);
+        if(!empty($where)) {
+            $this->db->where($where);
+        }
+        $this->db->where('transaction_info.is_active', 1);
+        $this->db->join('sales_info', 'sales_info.id = transaction_info.sales_id', 'left');
+        $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = transaction_info.customer_member_id', 'left');
+        $this->db->join('all_settings_info as expense', 'expense.id = transaction_info.expense_ctg AND transaction_info.type=8 AND  expense.type=7 ', 'left');
+        $this->db->join('transaction_info as expenseBankInfo', 'expenseBankInfo.parent_id = transaction_info.id AND expenseBankInfo.type=5', 'left');
+        $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = transaction_info.bank_id', 'left');
+
+        $this->db->order_by("transaction_info.id","ASC");
+        $row_info = $this->db->get('transaction_info');
+        if($row_info->num_rows()>0){
+            return $row_info->row();
+        }else{
+            return  false;
+        }
+    }
     public function details_inventory_report($product_id,$outlet_id){
-        $this->db->select('stock_info.*,sales_info.invoice_no,sales_info.net_total',true);
+        $this->db->select('stock_info.*',true);
         if(!empty($product_id) && !empty($outlet_id)) {
             $this->db->where("stock_info.product_id",$product_id);
             $this->db->where("(stock_info.credit_outlet='$outlet_id' OR stock_info.debit_outlet='$outlet_id' )");
         }
-        $this->db->join('sales_info', 'stock_info.sales_id = sales_info.id AND stock_info.stock_type=2 AND stock_info.is_active=1', 'left');
         $this->db->where('stock_info.is_active', 1);
         $row_info = $this->db->get('stock_info');
         if($row_info->num_rows()>0){
@@ -233,19 +190,16 @@ class Reports_model extends CI_Model {
         }
     }
     function todaySalesInfo($where=NULL){
-        $this->db->select('sum(debit_amount) as totalBill',true);
+        $this->db->select('sum(net_total) as totalSale, sum(payment_amount) as totalCollectionAmt,',true);
         if(!empty($where['firstDate'])){
-            $this->db->where("payment_date >=", $where['firstDate']);
-            $this->db->where("payment_date <=", $where['toDate']);
+            $this->db->where("sales_date >=", $where['firstDate']);
+            $this->db->where("sales_date <=", $where['toDate']);
         }
-        $this->db->where('transaction_info.is_active', 1);
-        $this->db->where_in('transaction_info.type', 4);
-        $records = $this->db->get('transaction_info');
+        $this->db->where('sales_info.is_active', 1);
+
+        $records = $this->db->get('sales_info');
         if($records->num_rows()>0) {
-            $result = $records->row();
-            if(!empty($result)) {
-                return (!empty($result->totalBill)?$result->totalBill:'0.00');
-            }
+            return $records->row();
         }else{
             return '0.00';
         }
@@ -367,120 +321,146 @@ class Reports_model extends CI_Model {
             return false;
         }
     }
+    function customerStatement($postData=null){
+        // Custom search filter
 
-    public function get_transaction_infoNew($where){
+        $outletID = !empty($postData['outletID'])?$postData['outletID']:'';
+        $typeID = !empty($postData['typeID'])?$postData['typeID']:'';
+        $customerName = !empty($postData['customerName'])?$postData['customerName']:'';
 
-        $this->db->select('transaction_info.*,sales_info.sales_date,customer_shipment_member_info.name as customerName,customer_shipment_member_info.mobile as customerMobile,customer_shipment_member_info.address,expense.title as expenseTitle,expenseBankInfo.bank_id as expenseBankID,tbl_pos_accounts.accountName as expenseBankName,tbl_pos_accounts.accountNumber',true);
-
-        if(!empty($where['firstDate']) && !empty($where['toDate']) ){
-            $this->db->where("transaction_info.payment_date >=", $where['firstDate']);
-            $this->db->where("transaction_info.payment_date <=", $where['toDate']);
-            unset($where['firstDate']);
-            unset($where['toDate']);
+        if (!empty($outletID)) {
+            $search_arr[] = " customer_shipment_member_info.outlet_id='" . $outletID . "' ";
         }
-        if(!empty($where)) {
-            $this->db->where($where);
+        if (!empty($typeID)) {
+            $search_arr[] = " customer_shipment_member_info.type='" . $typeID . "' ";
         }
-        $this->db->where('transaction_info.is_active', 1);
-        $this->db->join('sales_info', 'sales_info.id = transaction_info.sales_id', 'left');
-
-        $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = transaction_info.customer_member_id', 'left');
-        $this->db->join('all_settings_info as expense', 'expense.id = transaction_info.expense_ctg AND transaction_info.type=8 AND  expense.type=7 ', 'left');
-        $this->db->join('transaction_info as expenseBankInfo', 'expenseBankInfo.parent_id = transaction_info.id AND expenseBankInfo.type=5', 'left');
-        $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = expenseBankInfo.bank_id', 'left');
-        $this->db->order_by("transaction_info.id","ASC");
-        $row_info = $this->db->get('transaction_info');
-        if($row_info->num_rows()>0){
-            return $row_info->result();
-        }else{
-            return  false;
+        if (!empty($customerName)) {
+            $search_arr[] = " customer_shipment_member_info.name like '%" . $customerName . "%' ";
         }
-    }
 
-    function todayExpenseInfo($where=NULL){
-        $this->db->select('sum(debit_amount) as expenseAmnt',true);
-        if(!empty($where['firstDate'])){
-            $this->db->where("transaction_info.payment_date >=", $where['firstDate']);
-            $this->db->where("transaction_info.payment_date <=", $where['toDate']);
+        $search_arr[] = " customer_shipment_member_info.is_active != 0 ";
+        if(count($search_arr) > 0){
+            $searchQuery = implode(" and ",$search_arr);
         }
-        $this->db->where('transaction_info.type', 8);
-        $this->db->where('transaction_info.is_active', 1);
 
-        $records = $this->db->get('transaction_info');
+        $this->db->select("customer_shipment_member_info.*,outlet_setup.name as outlet_name,outlet_setup.address as outlet_address ,sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit,(SUM(IF(t.credit_amount != '' , t.credit_amount,0))  -  SUM(IF(t.debit_amount != '' , t.debit_amount,0))) as current_due",false);
+        if($searchQuery != ''){
+            $this->db->where($searchQuery);
+        }
+        $this->db->join('outlet_setup', 'outlet_setup.id = customer_shipment_member_info.outlet_id', 'left');
+        $this->db->join('transaction_info as t', 't.customer_member_id = customer_shipment_member_info.id', 'left');
+        $this->db->group_by("customer_shipment_member_info.id");
+        $this->db->order_by("current_due", "DESC");
+        $records = $this->db->get('customer_shipment_member_info');
         if($records->num_rows()>0) {
-            $result = $records->row();
-            if(!empty($result)) {
-                return (!empty($result->expenseAmnt)?$result->expenseAmnt:'0.00');
-            }
-        }else{
-            return '0.00';
-        }
-    }
-    function todayDueCollection($where=NULL){
-        $this->db->select('sum(credit_amount) as amount',true);
-        if(!empty($where['firstDate'])){
-            $this->db->where("transaction_info.payment_date >=", $where['firstDate']);
-            $this->db->where("transaction_info.payment_date <=", $where['toDate']);
-        }
-        $this->db->where('transaction_info.type', 3);
-        $this->db->where('transaction_info.is_active', 1);
-
-        $records = $this->db->get('transaction_info');
-        if($records->num_rows()>0) {
-            $result = $records->row();
-            if(!empty($result)) {
-                return (!empty($result->amount)?$result->amount:'0.00');
-            }
-        }else{
-            return '0.00';
-        }
-    }
-
-    function bestSalesReport($where=NULL){
-        $this->db->select('product_info.id as productID,sum(total_item) as totalCountItems,product_info.name,product_info.productCode,band.title as bandTitle,source.title as sourceTitle,productType.title as ProductTypeTitle,unitInfo.title as unitTitle',true);
-        if(!empty($where['firstDate'])){
-            $this->db->where("sales_date >=", $where['firstDate']);
-            $this->db->where("sales_date <=", $where['toDate']);
-            unset($where['firstDate']);
-            unset($where['toDate']);
-        }else{
-            if(empty($where['sales_info.invoice_no'])) {
-                $this->db->where("sales_date >=", date('Y-m-01'));
-                $this->db->where("sales_date <=", date('Y-m-d'));
-            }
-        }
-        if(!empty($where)) {
-            $this->db->where($where);
-        }
-        $this->db->where('sales_info.is_active', 1);
-        $this->db->where('product_info.is_active', 1);
-        $this->db->join('stock_info', 'stock_info.sales_id = sales_info.id AND stock_info.stock_type=2 AND stock_info.is_active=1', 'left');
-        $this->db->join('product_info', 'product_info.id = stock_info.product_id', 'left');
-        $this->db->join('all_settings_info as band', 'band.id = product_info.band_id', 'left');
-        $this->db->join('all_settings_info as source', 'source.id = product_info.source_id', 'left');
-        $this->db->join('all_settings_info as productType', 'productType.id = product_info.product_type', 'left');
-        $this->db->join('all_settings_info as unitInfo', 'unitInfo.id = product_info.unit_id', 'left');
-        $this->db->group_by("product_info.id");
-        $this->db->order_by("totalCountItems", "DESC");
-
-        $records = $this->db->get('sales_info');
-        if($records->num_rows()>0) {
-            $result = $records->result();
-            return $result;
+            return $records->result();
         }else{
             return false;
         }
     }
-    function getExpenseOverview($where=NULL){
-        $this->db->select('year(payment_date) as year , month(payment_date) as months, sum(`debit_amount`) as amount',true);
-        if(!empty($where['firstDate'])){
-            $this->db->where("transaction_info.payment_date >=", $where['firstDate']);
-            $this->db->where("transaction_info.payment_date <=", $where['toDate']);
+    function supplierStatement($postData=null){
+        $outletID       = !empty($postData['outletID'])?$postData['outletID']:'';
+        $typeID         = !empty($postData['typeID'])?$postData['typeID']:'';
+        $customerName   = !empty($postData['customerName'])?$postData['customerName']:'';
+        if (!empty($outletID)) {
+            $search_arr[] = " customer_shipment_member_info.outlet_id='" . $outletID . "' ";
         }
-        $this->db->where('transaction_info.type', 8);
-        $this->db->where('transaction_info.is_active', 1);
-        $this->db->group_by('year(payment_date)');
-        $this->db->group_by('month(payment_date)');
+        if (!empty($typeID)) {
+            $search_arr[] = " customer_shipment_member_info.type='" . $typeID . "' ";
+        }
+        if (!empty($customerName)) {
+            $search_arr[] = " customer_shipment_member_info.name like '%" . $customerName . "%' ";
+        }
+
+        $search_arr[] = " customer_shipment_member_info.is_active != 0 ";
+        if(count($search_arr) > 0){
+            $searchQuery = implode(" and ",$search_arr);
+        }
+
+        $this->db->select("customer_shipment_member_info.*,outlet_setup.name as outlet_name,outlet_setup.address as outlet_address ,sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit,(SUM(IF(t.debit_amount != '' , t.debit_amount,0))  -  SUM(IF(t.credit_amount != '' , t.credit_amount,0))) as current_due",false);
+        if($searchQuery != ''){
+            $this->db->where($searchQuery);
+        }
+        $this->db->join('outlet_setup', 'outlet_setup.id = customer_shipment_member_info.outlet_id', 'left');
+        $this->db->join('transaction_info as t', 't.customer_member_id = customer_shipment_member_info.id AND t.is_active=1 ', 'left');
+        $this->db->group_by("customer_shipment_member_info.id");
+        $this->db->order_by("current_due", "DESC");
+        $records = $this->db->get('customer_shipment_member_info');
+        if($records->num_rows()>0) {
+            return $records->result();
+        }else{
+            return false;
+        }
+    }
+    public function purchaseStatement($postData){
+        $outletName       = (!empty($postData['outletID'])?$postData['outletID']:$this->outletID);
+        $purchaseNo       = (!empty($postData['purchaseID'])?$postData['purchaseID']:'');
+        $search_arr[] = " purchase_info_stock_in.outlet_id = " . $outletName ;
+        if (!empty($purchaseNo)) {
+            $search_arr[] = " purchase_info_stock_in.purchase_id = '" . $purchaseNo."'" ;
+        }
+        $search_arr[] = " purchase_info_stock_in.is_active = 1 ";
+        if(count($search_arr) > 0){
+            $searchQuery = implode(" and ",$search_arr);
+        }
+
+        $this->db->select("
+        purchase_info_stock_in.id, 
+        purchase_info_stock_in.purchase_id, 
+        purchase_info_stock_in.purchase_date, 
+        purchase_info_stock_in.purchase_date, 
+        purchase_info_stock_in.note, 
+        purchase_info_stock_in.is_active, 
+        outlet_setup.name as outlet_name, GROUP_CONCAT(product_info.productCode SEPARATOR ', ' ) as productCodesInfo,sum(stock_info.total_price) as sumTotalPurchase,customer_shipment_member_info.name as supplierName,customer_shipment_member_info.mobile as supplierMobile,customer_shipment_member_info.address as supplierAddress", false);
+        if($searchQuery != ''){
+            $this->db->where($searchQuery);
+        }
+        if(empty($postData['firstDate'])){
+            $this->db->where('purchase_date',date('Y-m-d'));
+        }else{
+            $this->db->where("purchase_date >=", $postData['firstDate']);
+            $this->db->where("purchase_date <=", $postData['toDate']);
+        }
+        $this->db->join('outlet_setup', 'outlet_setup.id = purchase_info_stock_in.outlet_id', 'left');
+        $this->db->join('stock_info', 'stock_info.purchase_id=purchase_info_stock_in.id AND stock_info.is_active=1', 'left');
+        $this->db->join('product_info', 'product_info.id=stock_info.product_id', 'inner');
+        $this->db->join('customer_shipment_member_info', ' customer_shipment_member_info.id=purchase_info_stock_in.supplier_id', 'inner');
+
+        $this->db->group_by("purchase_info_stock_in.id");
+        $this->db->order_by("purchase_info_stock_in.id", "ASC");
+        $records = $this->db->get('purchase_info_stock_in');
+      //  return $this->db->last_query();
+        if($records->num_rows()>0) {
+            return $records->result();
+        }else{
+            return false;
+        }
+    }
+
+    public function supplierPayment($postData){
+
+        $memberID = !empty($postData['member'])?$postData['member']:'';
+        if (!empty($memberID)) {
+            $search_arr[] = " transaction_info.customer_member_id='" . $memberID . "' ";
+        }
+        $search_arr[] = "  transaction_info.type = 7 ";
+        $search_arr[] = "  transaction_info.is_active = 1 ";
+
+        if(count($search_arr) > 0){
+            $searchQuery = implode(" and ",$search_arr);
+        }
+        $this->db->select("transaction_info.*,concat(member.name,' (',member.address,')') as member_name,member.mobile,member.email,member.address");
+        if($searchQuery != ''){
+            $this->db->where($searchQuery);
+        }
+        if(empty($postData['firstDate'])){
+            $this->db->where('payment_date',date('Y-m-d'));
+        }else{
+            $this->db->where("payment_date >=", $postData['firstDate']);
+            $this->db->where("payment_date <=", $postData['toDate']);
+        }
+        $this->db->join("customer_shipment_member_info as member","member.id=transaction_info.customer_member_id","left");
+        $this->db->order_by("transaction_info.id", "ASC");
         $records = $this->db->get('transaction_info');
         if($records->num_rows()>0) {
             return $records->result();
@@ -489,55 +469,32 @@ class Reports_model extends CI_Model {
         }
     }
 
-    function salesOverview($where=NULL){
 
-        $this->db->select('year(sales_date) as year , month(sales_date) as months, sum(`sub_total`) as sum_sub_total,sum(discount) as sum_discount, sum(net_total) as sum_net_total,sum(payment_amount) as sum_payment_amount
-        ',true);
-        if(!empty($where['fromDate'])){
-            $this->db->where("sales_date >=", $where['fromDate']);
-            $this->db->where("sales_date <=", $where['toDate']);
+    public function summeryReportsOfTransaction($postData){
+        $search_arr[] = "  transaction_info.is_active = 1 ";
+        if(count($search_arr) > 0){
+            $searchQuery = implode(" and ",$search_arr);
         }
-
-        $this->db->where('sales_info.is_active', 1);
-        $this->db->group_by('year(sales_date)');
-        $this->db->group_by('month(sales_date)');
-
-        $records = $this->db->get('sales_info');
+        $this->db->select("transaction_info.type,SUM(IF(debit_amount>0,debit_amount,credit_amount)) as amount");
+        if($searchQuery != ''){
+            $this->db->where($searchQuery);
+        }
+        if(empty($postData['firstDate'])){
+            $this->db->where('payment_date',date('Y-m-d'));
+        }else{
+            $this->db->where("payment_date >=", $postData['firstDate']);
+            $this->db->where("payment_date <=", $postData['toDate']);
+        }
+        $this->db->where_in("transaction_info.type",[3,6,7,8,9,10,11,12]);
+        $this->db->group_by("transaction_info.type");
+        $records = $this->db->get('transaction_info');
         if($records->num_rows()>0) {
-            $result = $records->result();
-            if(!empty($result)) {
-                foreach ($result as $key => $row) {
-                    $result[$key]->getPurchaseInfo=self::getMonthsWiseProfit($row->months,$row->year);
-
-                }
-                return $result;
-            }
+            return $records->result();
         }else{
             return false;
         }
     }
 
-    function getMonthsWiseProfit($month,$year){
-        $this->db->select(' sum(total_price)  as totalAmnt, sum(total_item*purchaseAmtForSales) totalPurchasePrice, sum(total_price-(total_item*purchaseAmtForSales)) totalProfit, year(sales_date) as year_s, month(sales_date) as months_s ',true);
-
-        $this->db->where('month(sales_date)', $month);
-        $this->db->where('year(sales_date)', $year);
-        $this->db->where('sales_info.is_active', 1);
-        $this->db->where('stock_info.is_active', 1);
-        $this->db->join('sales_info', 'stock_info.sales_id = sales_info.id', 'inner');
-        $this->db->group_by('year(sales_date)');
-        $this->db->group_by('month(sales_date)');
-        $records = $this->db->get('stock_info');
-        if($records->num_rows()>0) {
-            $result = $records->row();
-            return $result;
-        }else{
-            return false;
-        }
-
-//        select sum(total_price)  as totalAmnt, sum(total_item*purchaseAmtForSales) totalPurchasePrice, sum(total_price-(total_item*purchaseAmtForSales)) totalProfit, year(sales_date) as year, month(sales_date) as months from stock_info INNER JOIN  `sales_info` s ON stock_info.sales_id = s.id  WHERE s.`sales_date` >= '2019-11-01' AND s.`sales_date` <= '2023-11-19' AND s.`is_active` = 1 AND stock_info.is_active=1 AND stock_info.stock_type=2  GROUP BY year(s.sales_date), month(s.sales_date);
-
-    }
 
 
 }

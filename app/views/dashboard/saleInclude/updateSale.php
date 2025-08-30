@@ -9,14 +9,19 @@ include ('salesHeader.php')
                     <div class="col-sm-12" style="background: #fff">
                         <div class="col-sm-8" style="margin-top:10px;">
                             <div class="form-group" >
-                                <div class="col-sm-7 search col-xs-8"  style="margin-bottom:10px;">
+                                <div class="col-sm-7 search col-xs-12"  style="margin-bottom:10px;">
                                     <div class="row">
                                         <span class="glyphicon glyphicon-search"></span>
-                                        <input required="" name="cst_name"
-                                               placeholder="Name/Mobile/Email/ Address"
-                                               class="customer form-control" onfocus="true"
-                                               id="tags_11">
-                                        <input type="hidden" value="<?php echo (!empty($sales->customer_id)?$sales->customer_id:'') ?>" name="customer" id="cst_id"/>
+                                        <select id="cst_id" style="width: 100%" class="customerNameDD"
+                                                name="customer"
+                                                required="required">
+                                            <option value="<?php echo (!empty($sales->customer_id)
+                                                ?$sales->customer_id:'') ?>"><?php echo (!empty
+                                                ($sales->customer_name)?$sales->customer_name:'').(!empty
+                                                    ($sales->customer_mobile)?" (".$sales->customer_mobile.")":'').
+                                                    (!empty($sales->address)?" -".$sales->address:'')
+                                                ?></option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="col-sm-1 col-xs-4" >
@@ -130,7 +135,11 @@ include ('salesHeader.php')
                                                             >
                                                             <input id="productID_<?php echo (!empty($productInfo->id)?$productInfo->id:'') ?>" name="productID[]" value="<?php echo (!empty($productInfo->product_id)?$productInfo->product_id:'') ?>" type="hidden">
 
-                                                            <input id="inventory_<?php echo (!empty($productInfo->id)?$productInfo->id:'') ?>" name="invantory[]" value="<?php echo (!empty($productInfo->currentItemStock)?$productInfo->currentItemStock+$productInfo->total_item:$productInfo->total_item) ?>" type="hidden">
+                                                            <input id="inventory_<?php echo (!empty($productInfo->id)
+                                                                ?$productInfo->id:'') ?>" name="invantory[]"
+                                                                   value="<?php echo (!empty
+                                                                   ($productInfo->currentItemStock)
+                                                                       ?$productInfo->currentItemStock+$productInfo->total_item:$productInfo->total_item) ?>" type="hidden">
                                                         </td>
                                                         <td style="width:15%;text-align:center;"  class=" appenTd" style="width:20%" id="total_<?php echo (!empty($productInfo->id)?$productInfo->id:'') ?>">
                                                             <input id="sub_total_<?php echo (!empty($productInfo->id)?$productInfo->id:'') ?>" name="sub_total[]" class="totalprice" readonly style="text-align: center;height:30px;" value="<?php echo (!empty($productInfo->total_price)?$productInfo->total_price:'') ?>" tabindex="-1"   type="text">
@@ -219,6 +228,26 @@ include ('salesHeader.php')
                                                readonly=""
                                                name="totalAmount"
                                         >
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <th class="thStyleNew">Receive Account</th>
+                                    <th class="tdStyleNew">
+                                        <select id="receivedBankAcc"
+                                                class="form-control"
+                                                name="receivedBankAcc">
+                                            <option value="">Select Bank Account</option>
+                                            <?php if(!empty($accounts)){
+                                                foreach ($accounts as $account) { ?>
+                                                    <option value="<?php echo $account->accountID; ?>" <?php
+                                                    echo ((!empty($sales->paymentBankID) && $sales->paymentBankID
+                                                        == $account->accountID)?"selected":'')  ?>>
+                                                        <?php echo $account->accountName; ?>
+                                                        <?php echo (!empty($account->accountNumber)?"["
+                                                            .$account->accountNumber."]":''); ?>
+                                                    </option>
+                                                <?php } } ?>
+                                        </select>
                                     </th>
                                 </tr>
                                 <tr>
@@ -315,18 +344,6 @@ include ('salesHeader.php')
                                     </th>
                                 </tr>
                                 <tr>
-                                    <th class="thStyleNew"  style="color:blue;">Account </th>
-                                    <th class="tdStyleNew">
-                                        <select required name="account_id" class="form-control"
-                                                style="width: 100%;">
-                                            <?php if(!empty($account)){
-                                                foreach ($account as $eachaccount) { ?>
-                                                    <option value="<?php echo $eachaccount->accountID; ?>"><?php echo $eachaccount->accountName; ?></option>
-                                                <?php } } ?>
-                                        </select>
-                                    </th>
-                                </tr>
-                                <tr>
 
                                     <th class="thStyleNew" >Current Due </th>
                                     <th class="tdStyleNew">
@@ -350,14 +367,13 @@ include ('salesHeader.php')
                                         <input tabindex="-1" id="totalCustomerDue" readonly placeholder="0.00" value='<?php echo (!empty($sales->total_due)?$sales->total_due:'0.00'); ?>'   type="text"  class="form-control inputStyle"  name="totalCustomerDue" >
                                     </th>
                                 </tr>
-                                <!--
                                 <tr>
                                     <th class="thStyleNew"> </th>
                                     <th class="thStyleNew"  >
                                         <label class="radio-inline"> <input type="checkbox"  id="isRemainingDueMakesWithDiscount" value="1" tabindex="-1" name="isRemainingDueMakesWithDiscount" ><b> Remaining Due Make as  Discount </b></label>
                                     </th>
+
                                 </tr>
-                                -->
 
 
                                 <tr id="div5">

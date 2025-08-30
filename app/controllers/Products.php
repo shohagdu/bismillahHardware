@@ -47,7 +47,7 @@ class Products extends CI_Controller {
     public function get_single_product_info(){
         $postData = $this->input->post();
         if(!empty($postData)) {
-            $products = $this->PRODUCTS->singleProductInfo(['product_info.id'=>$postData['id']]);
+            $products = $this->COMMON_MODEL->get_single_data_by_single_column('product_info', 'id', $postData['id']);
             if(!empty($products)){
                 echo json_encode(['status'=>'success','message'=>'Successfully Data Found','data'=>$products]); exit;
             }else{
@@ -75,23 +75,6 @@ class Products extends CI_Controller {
 
         if(empty($productType)){
             echo json_encode(['status'=>'error','message'=>'Product Type is required','data'=>'']);exit;
-        }else{
-            $existProductType   =   $this->SETTINGS->get_single_settings_info(['title'=>$productType,'type'=>4]);
-
-            if(empty($existProductType)){
-                $settingInfo = array(
-                    'type'          => 4,
-                    'title'         => $productType,
-                    'is_active'     =>  1,
-                    'created_by'    => $this->userId,
-                    'created_time'  => $this->dateTime,
-                    'created_ip'    => $this->ipAddress,
-                );
-                $this->db->insert("all_settings_info", $settingInfo);
-                $productTypeId  =   $this->db->insert_id();
-            }else{
-                $productTypeId  =   $existProductType->id;
-            }
         }
         if(empty($productUnit)){
             echo json_encode(['status'=>'error','message'=>'Product Unit is required','data'=>'']);exit;
@@ -106,10 +89,6 @@ class Products extends CI_Controller {
         if(empty($status)){
             echo json_encode(['status'=>'error','message'=>'Status is required','data'=>'']);exit;
         }
-        if(empty($productTypeId)){
-            echo json_encode(['status'=>'error','message'=>'Product Type ID is required','data'=>'']);exit;
-        }
-
 
         // checking product unique info check
 
@@ -117,6 +96,7 @@ class Products extends CI_Controller {
 
 
         if(empty($upId)) {
+
             // Checking Product Code Unique
             $checkProductCode=$this->PRODUCTS->checkProductUniqueInfo(['productCode'=> $productCode],'Product Code');
             if(!empty($checkProductCode['status']) && $checkProductCode['status']=='error'){
@@ -166,7 +146,7 @@ class Products extends CI_Controller {
                 'name' => $productName,
                 'band_id' => $productBrand,
                 'source_id' => $productSource,
-                'product_type' => $productTypeId,
+                'product_type' => $productType,
                 'unit_id' => $productUnit,
                 'unit_sale_price' => $productPrice,
                 'purchase_price' => $productPurchasePrice,
@@ -203,7 +183,7 @@ class Products extends CI_Controller {
                 'name' => $productName,
                 'band_id' => $productBrand,
                 'source_id' => $productSource,
-                'product_type' => $productTypeId,
+                'product_type' => $productType,
                 'unit_id' => $productUnit,
                 'unit_sale_price' => $productPrice,
                 'purchase_price' => $productPurchasePrice,
@@ -296,55 +276,6 @@ class Products extends CI_Controller {
         return $imageResource;
     }
 
-    function deleteProductInfo()
-    {
-        extract($_POST);
-        $this->db->trans_start();
-        if (empty($upId)) {
-            echo json_encode(['status' => 'error', 'message' => 'Product ID is required', 'data' => '']);
-            exit;
-        }
-        // Checking Product Code Unique
-        $outletID=$this->outletID;
-        $debit_item_info=$this->REPORT->stock_item_count(['stock_info.product_id'=>$upId,'stock_info.debit_outlet'=>$outletID]);
-
-        $credit_item_info=$this->REPORT->stock_item_count(['stock_info.product_id'=>$upId,'stock_info.credit_outlet'=>$outletID]);
-        $current_stock_item= $debit_item_info-$credit_item_info;
-
-        if (!empty($current_stock_item) && $current_stock_item !=0) {
-            echo json_encode(['status' => 'error', 'message' => "This Products have a Stock (".$current_stock_item.") You
-            can not delete this product. First empty stock then try to delete this product.",
-                'data' => '']);
-            exit;
-        }
-        $productInfo = array(
-            'is_active' => 0,
-            'updated_by' => $this->userId,
-            'updated_time' => $this->dateTime,
-            'updated_ip' => $this->ipAddress,
-        );
-        $this->db->where('id', $upId);
-        $this->db->update("product_info", $productInfo);
-        $message = 'Successfully Delete Information';
-
-        $redierct_page = 'products/index';
-        $this->db->trans_complete();
-        if ($this->db->trans_status() === true) {
-            echo json_encode(['status' => 'success', 'message' => $message]);
-            exit;
-        } else {
-            echo json_encode(['status' => 'success', 'message' => 'Fetch a problem, data not update',
-                'redirect_page' => $redierct_page]);
-            exit;
-        }
-    }
-
-    function productTypeSuggestions() {
-        if (isset($_GET['term'])) {
-            $q = strtolower($_GET['term']);
-            echo json_encode($this->PRODUCTS->productTypeSuggest($q,4));
-        }
-    }
 
 
 

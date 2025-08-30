@@ -16,7 +16,7 @@
 		          		<div class="col-md-12">
 		          			<div class="form-group has-feedback">
 						        <label>Add Product</label>
-						        <input id="productNameBarCode" class="form-control" placeholder="Add Product">
+						        <input id="productName" class="form-control" placeholder="Add Product">
 						    </div>
 		          		</div>
 		          	</div>
@@ -26,11 +26,10 @@
 		          			<table id="tableStyle" class="table table-bordered" >
 				                <thead>
 				                <tr>
-				                    <th>Product Name (Product Code)</th>
-                                    <th style="width: 8%;">Quantity</th>
-				                    <th style="width: 8%;">Type</th>
-				                    <th style="width: 20%;">Product Catagory</th>
-				                    <th style="width:10%;">Action</th>
+				                  <th>Product Name (Product Code)</th>
+				                  <th style="width: 8%;">Quantity</th>
+				                  <th style="width: 20%;">Product Catagory</th>
+				                  <th style="width:10%;">Action</th>
 				                </tr>
 					            </thead>
 					            <tbody id="tableDynamic">
@@ -65,7 +64,7 @@
                     <div class="barcode-label-container" >
                         <div id="barcode-label" class="barcode-label">
                             <div class="barcode-text">
-                                <div >RED GREEN</div>
+                                <div >Bismillah Hardware</div>
                                 <span class="barcode-strong"><?php echo $barcode['productName']; ?></span>
                             </div>
                             <div class="barcode-area">

@@ -2,7 +2,7 @@
     <div class="row">
         <div class="box-body" id="alert" style="display: none;"> <div class="callout callout-info"><span
                     id="show_message"></span></div></div>
-        <div class="col-md-12">
+        <div class="">
             <div class="box no-border" >
                 <div class="box-header">
                     <h3 class="box-title">  <?php echo !empty($title)?$title:'' ?></h3>
@@ -50,69 +50,75 @@
                         <thead>
                         <tr>
                             <th> SL</th>
-                            <th class="width10per"> Type</th>
+                            <th class="width20per"> Type</th>
                             <th class="width10per"> Date</th>
-                            <th class="width10per"> Shipment No</th>
-                            <th> Stock In</th>
-                            <th> Out(Received By Party)</th>
-                            <th> Unit Price </th>
-                            <th> Sub Total </th>
-                            <th> Discount </th>
-                            <th> Billing Amount  </th>
-                            <th class="width20per"> Payment Receive (Payment By Party) </th>
+                            <th > Remarks</th>
+                            <th class="width10per text-right"> Debit</th>
+                            <th class="width10per text-right"> Credit</th>
+                            <th class="width10per text-right"> Balance </th>
                         </tr>
                         </thead>
                         <tbody>
                         <?php
-                        $tDebitQty='0';
-                        $tCreditQty='0';
-                        $debitAmt='0.00';
-                        $creditAmt='0.00';
+                        $tDebitQty      =   '0.00';
+                        $tCreditQty     =   '0.00';
+                        $balance        =   '0.00';
                         if(!empty($info)){
                             $i=1;
                             foreach ($info as $row) {
                                 ?>
                                 <tr>
                                     <td><?php echo $i++; ?></td>
-                                    <td><?php
-                                        if($row->type==1){
-                                            echo "Stock IN";
-                                        }elseif($row->type==2){
-                                            echo "Stock OUT";
-                                        }elseif($row->type==3){
-                                            echo "Payment Received";
+                                    <td class="text-left"><?php
+                                        if(!empty($row->type) && $row->type==6){
+                                            echo "Purchase From Supplier";
+                                        }elseif(!empty($row->type) && $row->type==7){
+                                            echo "Supplier Payment";
                                         }
                                     ?></td>
-                                    <td class="text-left"><?php
-                                        if(!empty($row->trans_date)) {
-                                            echo(!empty($row->trans_date) ? date('d M, Y', strtotime
-                                            ($row->trans_date)) : '');
-                                        }else{
-                                            echo(!empty($row->destibute_dt) ? date('d M, Y', strtotime
-                                            ($row->destibute_dt)) : '');
-                                        }
+                                    <td class="text-left">
+                                        <?php
+                                            echo(!empty($row->payment_date) ? date('d M, Y', strtotime
+                                            ($row->payment_date)) : '');
+                                        ?>
+                                    </td>
+                                    <td class="text-left">
+                                        <?php echo (!empty($row->remarks)?$row->remarks:'');
+                                        ?>
 
-                                        ?></td>
-                                    <td class="text-left"><?php echo (!empty($row->shipmentTitle)?$row->shipmentTitle:'');
-                                        ?></td>
+                                        <?php echo (!empty($row->transCode)?" >> TRNS ID # ".$row->transCode:'');
+                                        ?>
+                                        <?php echo (!empty($row->purchase_id)?" >> PUR. ID # ".$row->purchase_id:'');
+                                        ?>
 
-
-                                    <td class="text-right"><?php echo !empty($row->debit_qty)?number_format
-                                        ($row->debit_qty,0):'-'; $tDebitQty+=$row->debit_qty; ?></td>
-                                    <td class="text-right"><?php echo !empty($row->credit_qty)?number_format
-                                        ($row->credit_qty,0):'-'; $tCreditQty+=$row->credit_qty; ?></td>
-
-                                    <td class="text-right"><?php echo !empty($row->unit_price)?number_format($row->unit_price,2):'-';  ?></td>
-                                    <td class="text-right"><?php echo !empty($row->sub_total)?number_format($row->sub_total,2):'-';  ?></td>
-                                    <td class="text-right"><?php echo !empty($row->discount)?number_format($row->discount,2):'-';  ?></td>
+                                    </td>
 
 
-                                    <td class="text-right"><?php echo !empty($row->debit_amount)
-                                            ?number_format($row->debit_amount,2):'-'; $debitAmt+=$row->debit_amount;
-                                      ?></td>
-                                    <td class="text-right"><?php echo !empty($row->credit_amount) ?number_format
-                                        ($row->credit_amount,2):'-'; $creditAmt+=$row->credit_amount;
-                                      ?></td>
+                                    <td class="text-right padding-right-5px">
+                                        <?php
+                                            echo !empty($row->debit_amount)?number_format
+                                            ($row->debit_amount,2):'0.00'; $tDebitQty+=!empty($row->debit_amount)?$row->debit_amount:'0.00';
+                                        ?>
+                                    </td>
+                                    <td class="text-right padding-right-5px">
+                                        <?php
+                                             echo !empty($row->credit_amount)?number_format
+                                            ($row->credit_amount,2):'0.00';
+                                             $tCreditQty+= !empty($row->credit_amount)
+                                            ?$row->credit_amount:'0.00';
+                                        ?>
+                                    </td>
+                                    <td class="text-right padding-right-5px">
+                                        <?php
+                                         $balance += ((!empty($row->debit_amount)?$row->debit_amount:'0.00') -
+                                            (!empty
+                                        ($row->credit_amount)
+                                            ?$row->credit_amount:'0.00'));
+                                        echo number_format($balance,2);
+                                        ?>
+                                    </td>
+
+
 
                                 </tr>
                                 <?php
@@ -127,48 +133,15 @@
                         <tfoot>
                             <tr>
                                 <th colspan="4">Total Summery</th>
-                                <th class="text-right"><?php echo (!empty($tDebitQty)?$tDebitQty:'0') ?></th>
-                                <th class="text-right"><?php echo (!empty($tCreditQty)?$tCreditQty:'0') ?></th>
-                                <th colspan="3"></th>
-                                <th class="text-right"><?php echo (!empty($debitAmt)?number_format($debitAmt,2):'0.00') ?></th>
-                                <th class="text-right"><?php echo (!empty($creditAmt)?number_format($creditAmt,2):'0.00') ?></th>
+                                <th class="text-right padding-right-5px"><?php echo (!empty($tDebitQty)?number_format($tDebitQty,2):'0')
+                                    ?></th>
+                                <th class="text-right padding-right-5px"><?php echo (!empty($tCreditQty)?number_format
+                                    ($tCreditQty,2)
+                                        :'0.00') ?></th>
+                                <th class="text-right"></th>
                             </tr>
                         </tfoot>
                     </table>
-                    <table class="table-style width70per"  style="margin-top:10px;">
-                        <tr>
-                            <th class=" " colspan="2" >Summery</th>
-                            <th class="text-center width30per">Balance</th>
-                        </tr>
-                         <tr>
-                            <th class="text-left width40per " >Total Stock In (+)</th>
-                            <td class="width30per"> <span class="badge bg-yellow" > <?php echo (!empty($tDebitQty)?$tDebitQty:'0') ?></span></td>
-                             <td class="width30per" rowspan="2"><span class="badge bg-green"> <?php echo (!empty
-                                     ($tDebitQty-$tCreditQty)?$tDebitQty-$tCreditQty:'0') ?></span></td>
-                        </tr>
-
-                         <tr>
-                            <th class="text-left ">Total Stock Out (-)</th>
-                            <td > <span class="badge bg-red"> <?php echo (!empty($tCreditQty)?$tCreditQty:'0') ?></span></td>
-                        </tr>
-                        <tr>
-                            <th class="text-left " >Total Billing Amount (-)</th>
-                            <td> <span class="badge bg-yellow"> <?php echo (!empty($debitAmt)?number_format($debitAmt,2):'0.00') ?></span></td>
-                             <td rowspan="2"><span class="badge bg-green"> <?php  echo
-                                     ((!empty($debitAmt-$creditAmt) ) ?number_format($debitAmt-$creditAmt,2):'0.00') ?></span></td>
-                        </tr>
-
-                         <tr>
-                            <th class="text-left ">Payment Receive (Payment By Party) (+)</th>
-                            <td > <span class="badge bg-red"> <?php echo (!empty($creditAmt)?number_format($creditAmt,2):'0.00') ?></span></td>
-                        </tr>
-
-
-
-
-
-                    </table>
-
                 </div>
             </div>
         </div>

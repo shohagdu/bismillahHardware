@@ -18,6 +18,7 @@ class Settings extends CI_Controller
         $this->load->model('Settings_model', 'SETTINGS', TRUE);
         $this->load->model('Products_model', 'PRODUCTS', TRUE);
         $this->load->model('Common_model', 'COMMON_MODEL', TRUE);
+        $this->load->model('Reports_model', 'REPORT', TRUE);
 
 
         $user_outlet= $this->session->userdata('outlet_data');
@@ -224,11 +225,15 @@ class Settings extends CI_Controller
             $this->session->set_flashdata('msg', '<div style="text-align: center;font-weight:bold;padding-bottom: 5px;padding-top:10px;">Update ID is required</div>');
             redirect(base_url('settings/PosConfigIndex'));
         }
+
+        $message['sales']           =   (!empty($salesMessage)?$salesMessage:'');
+        $message['payment']         =   (!empty($paymentMessage)?$paymentMessage:'');
         $data=[
             'company_info'=>$shopName,
             'address'=>$address,
             'contactNo'=>$contact_info,
             'contactPerson'=>$contact_person,
+            'smsText'=>(!empty($message)?json_encode($message,JSON_UNESCAPED_UNICODE):''),
             'updated_by'=>$this->userId,
             'updated_time'=>$this->dateTime,
             'updated_ip'=>$this->ipAddress,
@@ -279,12 +284,10 @@ class Settings extends CI_Controller
         }
     }
    
-
+/*
     public function sendSmsJob(){
        
         $get_all_pending_sms=$this->SETTINGS->get_all_pending_sms();
-        
-       
         $i=1;
         $sms_hisotry=[];
         if(!empty($get_all_pending_sms)){
@@ -300,7 +303,7 @@ class Settings extends CI_Controller
             print_r($sms_hisotry);
         }
     }
-
+*/
     
     public function get_sms_report(){
         $data['sms_info'] = $this->SETTINGS->get_sms_info();
@@ -472,22 +475,22 @@ class Settings extends CI_Controller
         $data['title']='Customer';
         $data['type']=1;
         $data['redierct_page']='settings/customer_info';
-        $data['outlet_info']= $this->SETTINGS->outlet_info();
+        $data['outlet_info']= [];
         $view['content'] = $this->load->view('dashboard/settings/customer_member_Info/customer_member', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
     public  function customer_due_collection(){
         $data = array();
         $view = array();
-        $data['title']='Customer Due Collection';
+        $data['title']='Customer Transaction';
         $data['redierct_page']='settings/customer_due_collection';
-//        $data['outlet_info']= $this->SETTINGS->outlet_info();
+        $data['outlet_info']= $this->SETTINGS->outlet_info();
+        $data['accounts']            = $this->SETTINGS->account();
         $view['content'] = $this->load->view('dashboard/settings/customer_member_Info/customer_due_collection', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
     public function save_customer_member_info(){
         extract($_POST);
-
         $this->db->trans_start();
         if(empty($type)){
             echo json_encode(['status'=>'error','message'=>'Type is required','data'=>'']);exit;
@@ -501,31 +504,58 @@ class Settings extends CI_Controller
         if(empty($status)){
             echo json_encode(['status'=>'error','message'=>'Status is required','data'=>'']);exit;
         }
+        if(empty($openingBalanceType) && $type==1){
+            echo json_encode(['status'=>'error','message'=>'Opening Amount Type is required','data'=>'']);exit;
+        }
+
         $customer_info=[];
         if(empty($upId)) {
             $info = array(
-                'type' => $type,
-                'outlet_id' => $this->outletID,
-                'name' => $name,
-                'mobile' =>(!empty($mobile)?$mobile:''),
-                'email' => (!empty($email)?$email:''),
+                'type'          => $type,
+                'outlet_id'     => $this->outletID,
+                'name'          => $name,
+                'mobile'        =>(!empty($mobile)?$mobile:''),
+                'email'         => (!empty($email)?$email:''),
                 'date_of_birth' => (!empty($customer_date_of_birth)?date('Y-m-d',strtotime($customer_date_of_birth)):''),
-                'address' => (!empty($address)?$address:''),
-                'remarks' => (!empty($remarks)?$remarks:''),
-                'is_active' => (!empty($status)?$status:''),
-                'created_by' => $this->userId,
-                'created_time' => $this->dateTime,
-                'created_ip' => $this->ipAddress,
+                'address'       => (!empty($address)?$address:''),
+                'remarks'       => (!empty($remarks)?$remarks:''),
+                'is_active'     => (!empty($status)?$status:''),
+                'created_by'    => $this->userId,
+                'created_time'  => $this->dateTime,
+                'created_ip'    => $this->ipAddress,
             );
             $this->db->insert("customer_shipment_member_info", $info);
             $customer_id=$this->db->insert_id();
+
+            if($type==1) {
+                $payment_transaction = [
+                    'customer_member_id' => $customer_id,
+                    'payment_date' => date('Y-m-d'),
+                    'remarks' => (!empty($remarks) ? $remarks : ''),
+                    'is_opening_balance' => 2,
+                    'created_by' => $this->userId,
+                    'created_time' => $this->dateTime,
+                    'created_ip' => $this->ipAddress,
+                ];
+                if (!empty($openingBalanceType) && $openingBalanceType == 1) { // Opening Due
+                    $payment_transaction['credit_amount'] = (!empty($openingDue) ? $openingDue : '0.00');
+                    $payment_transaction['type'] = 10;
+                } elseif (!empty($openingBalanceType) && $openingBalanceType == 2) { // Opening Deposited
+                    $payment_transaction['debit_amount'] = (!empty($openingDue) ? $openingDue : '0.00');
+                    $payment_transaction['type'] = 9;
+                } else {
+                    echo json_encode(['status' => 'error', 'message' => 'Opening Amount Type is required', 'data' => '']);
+                    exit;
+                }
+                $this->db->insert("transaction_info", $payment_transaction);
+            }
             $message='Successfully Save Information';
             $customer_info=[
-              'id'=>$customer_id,
-              'name'=>$name,
-              'mobile'=>$mobile,
-              'email'=>$email,
-              'address'=>$address
+                'id'=>$customer_id,
+                'name'=>$name,
+                'mobile'=>$mobile,
+                'email'=>$email,
+                'address'=>$address
             ];
         }else{
             $info = array(
@@ -542,8 +572,59 @@ class Settings extends CI_Controller
                 'updated_ip' => $this->ipAddress,
             );
 
+
             $this->db->where('id',$upId);
             $this->db->update("customer_shipment_member_info", $info);
+
+            if($type==1) {
+                $getOpeningBal = $this->REPORT->get_single_transaction_info(['transaction_info.customer_member_id' =>
+                    $upId, 'transaction_info.is_opening_balance' => 2, 'transaction_info.is_active' => 1]);
+
+
+                if (empty($getOpeningBal)) {
+                    $payment_transaction = [
+                        'customer_member_id' => $upId,
+                        'payment_date' => date('Y-m-d'),
+                        'remarks' => (!empty($remarks) ? $remarks : ''),
+                        'is_opening_balance' => 2,
+                        'created_by' => $this->userId,
+                        'created_time' => $this->dateTime,
+                        'created_ip' => $this->ipAddress,
+                    ];
+                    if (!empty($openingBalanceType) && $openingBalanceType == 1) { // Opening Due
+                        $payment_transaction['credit_amount'] = (!empty($openingDue) ? $openingDue : '0.00');
+                        $payment_transaction['type'] = 10;
+                    } elseif (!empty($openingBalanceType) && $openingBalanceType == 2) { // Opening Deposited
+                        $payment_transaction['debit_amount'] = (!empty($openingDue) ? $openingDue : '0.00');
+                        $payment_transaction['type'] = 9;
+                    }
+
+                    $this->db->insert("transaction_info", $payment_transaction);
+
+                } else {
+                    $payment_transaction = [
+                        'remarks' => (!empty($remarks) ? $remarks : ''),
+                        'updated_by' => $this->userId,
+                        'updated_time' => $this->dateTime,
+                        'updated_ip' => $this->ipAddress,
+                    ];
+
+                    if (!empty($openingBalanceType) && $openingBalanceType == 1) { // Opening Due
+                        $payment_transaction['debit_amount'] = '0.00';
+                        $payment_transaction['credit_amount'] = (!empty($openingDue) ? $openingDue : '0.00');
+                        $payment_transaction['type'] = 10;
+                    } elseif (!empty($openingBalanceType) && $openingBalanceType == 2) { // Opening Deposited
+                        $payment_transaction['credit_amount'] = '0.00';
+                        $payment_transaction['debit_amount'] = (!empty($openingDue) ? $openingDue : '0.00');
+                        $payment_transaction['type'] = 9;
+                    }
+                    $this->db->where(['customer_member_id' => $upId, 'is_opening_balance' => 2,'is_active'=>1]);
+                    $this->db->update("transaction_info", $payment_transaction);
+                }
+            }
+
+
+
             $message='Successfully Update Information';
         }
 
@@ -567,9 +648,9 @@ class Settings extends CI_Controller
         if(empty($type)){
             echo json_encode(['status'=>'error','message'=>'Type is required','data'=>'']);exit;
         }
-        $info = $this->SETTINGS->checkingDueExitMember(['t.customer_member_id'=>$id]);
 
-        if(!empty($info) && ($info > 0 )){
+        $info = $this->SETTINGS->checkingDueExitMember(['customer_shipment_member_info.id'=>$id]);
+        if(!empty($info) && ($info->current_due_qty >0 || $info->total_credit_amount>0  )){
             echo json_encode(['status'=>'error','message'=>'Sorry, This member Contains  Due Qty or Due Amount, You are not Authorised  to Delete this member.','data'=>'']);exit;
         }else {
             $info = array(
@@ -611,7 +692,7 @@ class Settings extends CI_Controller
     {
         extract($_POST);
         if(!empty($id)) {
-            $info = $this->SETTINGS->get_single_customer_member_info(['id'=>$id]);
+            $info = $this->SETTINGS->get_single_customer_member_info(['customer_shipment_member_info.id'=>$id]);
             if(!empty($info)){
                 echo json_encode(['status'=>'success','message'=>'successfully data found','data'=>$info]);exit;
             }else{
@@ -707,6 +788,7 @@ class Settings extends CI_Controller
                 echo json_encode(['status'=>'error','message'=>'no data found','data'=>[]]);exit;
             }
         }
+
     }
     public  function outlet_opening_stock_info($outlet_id){
         $data = array();
@@ -781,48 +863,55 @@ class Settings extends CI_Controller
 
     public function save_customer_due_collection(){
         extract($_POST);
+
         $payment_byInfo=[];
         if(!empty($payment_by)){
             foreach ($payment_by as $key=>$payCtg){
-                $payment_byInfo[$payCtg]=$payment_ctg_amount[$key];
+                if(!empty($payment_ctg_amount[$key])) {
+                    $payment_byInfo[$payCtg] = number_format($payment_ctg_amount[$key], 2, '.', '');
+                }
             }
-        }
-        if(empty($transType)){
-            echo json_encode(['status'=>'error','message'=>'Transaction Type is required','data'=>'']);exit;
         }
         if(empty($customer_id)){
             echo json_encode(['status'=>'error','message'=>'Customer Name is required','data'=>'']);exit;
         }
+        if(empty($transactionType)){
+            echo json_encode(['status'=>'error','message'=>'Transaction Type is required','data'=>'']);exit;
+        }
 
-        if(empty($payment_now)){
+        if(empty($accountID) && ($transactionType == 3 || $transactionType == 11) ){
+            echo json_encode(['status'=>'error','message'=>'Accounts Name is required','data'=>'']);exit;
+        }
+        if(empty($payment_now) || $payment_now=='0.00' || $payment_now <= 0 ){
             echo json_encode(['status'=>'error','message'=>'Payment Amount is required','data'=>'']);exit;
         }
         if(empty($payment_date)){
             echo json_encode(['status'=>'error','message'=>'Payment Date is required','data'=>'']);exit;
         }
-        if(empty($payment_byInfo)){
-            echo json_encode(['status'=>'error','message'=>'Minimum one pyament mode  is required','data'=>'']);exit;
+        if(empty($payment_byInfo) && ($transactionType == 3 )){
+            echo json_encode(['status'=>'error','message'=>'Minimum one payment mode  is required','data'=>'']);exit;
         }
-
-
-
-
         if(empty($upId)){
             $this->db->trans_start();
             $payment_transaction=[
-                'customer_member_id'    =>  $customer_id,
-                'payment_date'          =>  (!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
-                'type'                  =>  $transType,
-                'remarks'               =>  $remarks,
-                'created_by'            =>  $this->userId,
-                'created_time'          =>  $this->dateTime,
-                'created_ip'            =>  $this->ipAddress,
+                'transCode'                 =>  time(),
+                'customer_member_id'        =>  $customer_id,
+                'payment_date'              =>  (!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
+                'type'                      =>  $transactionType,
+                'remarks'                   =>  $remarks,
+                'created_by'                =>  $this->userId,
+                'created_time'              =>  $this->dateTime,
+                'created_ip'                =>  $this->ipAddress,
             ];
-            if($transType==3){
-                $payment_transaction['payment_by']      = (!empty($payment_byInfo)?json_encode($payment_byInfo):'') ;
-                $payment_transaction['credit_amount']   = $payment_now;
-            }else if($transType==7){
-                $payment_transaction['debit_amount']   = $payment_now;
+            if($transactionType==3){ // Due Collection
+                $payment_transaction['payment_by']      = (!empty($payment_byInfo)?json_encode($payment_byInfo):'');
+                $payment_transaction['debit_amount']    = $payment_now;
+                $payment_transaction['bank_id']         = $accountID;
+            }elseif($transactionType==11){ //Cash Deposit to Customer
+                $payment_transaction['credit_amount']    = $payment_now;
+                $payment_transaction['bank_id']          = $accountID;
+            }elseif($transactionType==12){ //Closing Discount
+                $payment_transaction['debit_amount']    = $payment_now;
             }
             $this->db->insert("transaction_info",$payment_transaction);
 
@@ -842,84 +931,66 @@ class Settings extends CI_Controller
         }else{
             // when update
             $this->db->trans_start();
+
             $payment_transaction=[
-                'customer_member_id'    =>  $customer_id,
-                'payment_date'          =>  (!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
-                'type'                  =>  $transType,
-                'remarks'               =>  $remarks,
-                'updated_by'            =>  $this->userId,
-                'updated_time'          =>  $this->dateTime,
-                'updated_ip'            =>  $this->ipAddress,
+                'customer_member_id'        =>  $customer_id,
+                'payment_date'              =>  (!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
+                'type'                      =>  $transactionType,
+                'remarks'                   =>  $remarks,
+                'updated_by'                =>  $this->userId,
+                'updated_time'              =>  $this->dateTime,
+                'updated_ip'                =>  $this->ipAddress,
             ];
-            if($transType==3){
-                $payment_transaction['payment_by']      =(!empty($payment_byInfo)?json_encode($payment_byInfo):'') ;
-                $payment_transaction['credit_amount']   = $payment_now;
-            }else{
-                $payment_transaction['debit_amount']   = $payment_now;
+            if($transactionType==3){ // Due Collection
+                $payment_transaction['payment_by']      = (!empty($payment_byInfo)?json_encode($payment_byInfo):'');
+                $payment_transaction['debit_amount']    = $payment_now;
+                $payment_transaction['bank_id']         = $accountID;
+            }elseif($transactionType==11){ //Cash Deposit to Customer
+                $payment_transaction['credit_amount']    = $payment_now;
+                $payment_transaction['bank_id']          = $accountID;
+            }elseif($transactionType==12){ //Closing Discount
+                $payment_transaction['debit_amount']    = $payment_now;
             }
 
-
-            $this->db->where('id',$upId);
+            $this->db->where("id",$upId);
             $this->db->update("transaction_info",$payment_transaction);
 
             $redierct_page='settings/customer_due_collection';
-            $error=$this->db->error();
-
             $this->db->trans_complete();
+
             if($this->db->trans_status()===true){
                 $this->db->trans_commit();
-                echo json_encode(['status'=>'success','message'=>"Successfully Update Information.",
-                    'redirect_page'=>$redierct_page]);
+                echo json_encode(['status'=>'success','message'=>"Successfully Update Information.",'redirect_page'=>$redierct_page]);
                 exit;
             }else{
                 $this->db->trans_rollback();
-                echo json_encode(['status'=>'error','message'=>$error['message'],'redirect_page'=>$redierct_page]);exit;
+                echo json_encode(['status'=>'error','message'=>'Fetch a problem, data not update','redirect_page'=>$redierct_page]);exit;
             }
 
         }
     }
-
-    function getSingleTransactionInfo()
-    {
+    public function showCustomerTransInfoViaID(){
         extract($_POST);
-        if(!empty($id)) {
-            $info = $this->SETTINGS->getSingleTransactionInfo(['t.id'=>$id]);
-            if(!empty($info)){
-                echo json_encode(['status'=>'success','message'=>'successfully data found','data'=>$info]);exit;
+        if(!empty($id)){
+            $data=$this->REPORT->get_single_transaction_info(['transaction_info.id'=>$id]);
+            if(!empty($data)){
+                echo json_encode(['status'=>'success','message'=>'Data Found Successfully','data'=>$data]); exit;
             }else{
-                echo json_encode(['status'=>'error','message'=>'no data found','data'=>[]]);exit;
+                echo json_encode(['status'=>'error','message'=>'No Data Found ','data'=>'']); exit;
             }
         }
     }
+    public  function customerTransVoucher($transID){
+        $data = array();
+        $view = array();
+        $data['title']              = 'Customer Voucher';
+        $data['transactionInfo']    = $this->REPORT->get_single_transaction_info(['transaction_info.id'=>$transID]);
+        $data['transactionType']    = $this->SETTINGS->transactionType();
 
-    public function delete_due_collection(){
-        extract($_POST);
-        if(empty($upId)){
-            echo json_encode(['status'=>'error','message'=>'Update ID is required','data'=>'']);exit;
-        }
-        // when Delete
-        $this->db->trans_start();
-        $payment_transaction=[
-            'is_active'             =>  0,
-            'updated_by'            =>  $this->userId,
-            'updated_time'          =>  $this->dateTime,
-            'updated_ip'            =>  $this->ipAddress,
-        ];
-
-        $this->db->where('id',$upId);
-        $this->db->update("transaction_info",$payment_transaction);
-
-        $error=$this->db->error();
-        $this->db->trans_complete();
-        if($this->db->trans_status()===true){
-            $this->db->trans_commit();
-            echo json_encode(['status'=>'success','message'=>"Successfully Delete Information."]);
-            exit;
-        }else{
-            $this->db->trans_rollback();
-            echo json_encode(['status'=>'error','message'=>$error['message']]);exit;
-        }
+        $view['content']            = $this->load->view('dashboard/settings/customer_member_Info/customerTransVoucher', $data, TRUE);
+        $this->load->view('dashboard/index', $view);
     }
+
     function expenseCtg() {
         $data = array();
         $view = array();
@@ -930,14 +1001,87 @@ class Settings extends CI_Controller
         $this->load->view('dashboard/index', $view);
     }
 
-    public function customerDueReports(){
+    public function sendSms(){
+        $getSms=$this->SETTINGS->get_all_pending_sms();
+        if(!empty($getSms[0])){
+            $sendSmsLog=[];
+            foreach ($getSms as $key=>$row){
+                if(!empty($row->mobile_number)) {
+                    $encodebangla   = utf8_encode($row->msg );
+                    $sms            = utf8_decode($encodebangla);
 
-        $data = array();
-        $view = array();
-        $data['title']      = "Customer Due Reports";
-        $data['info']       = $this->SETTINGS->customerDueReports();
-        $view['content']    = $this->load->view('dashboard/reports/customer_member/customerDueReports', $data, TRUE);
-        $this->load->view('dashboard/index', $view);
+                    $sendSmsLog[$key]['status']='';
+                    $sendSmsLog[$key] = [
+                        'mobile_no' =>  $row->mobile_number,
+                        'message'   =>  $row->msg,
+                    ];
+                    $url = 'https://www.24bulksmsbd.com/api/smsSendApi';
+                    $data = array(
+                        'customer_id'   => 66,
+                        'api_key'       => 171574717329433701673050507,
+                        'message'       => $sms,
+                        'mobile_no'     => $row->mobile_number
+                    );
+
+                    $curl = curl_init($url);
+                    curl_setopt($curl, CURLOPT_POST, true);
+                    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+                    curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
+                    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+                    $output = curl_exec($curl);
+                    curl_close($curl);
+                    //  dd($output);
+                    $response=(!empty($output)?json_decode($output,true):'');
+                    //   dd($response);
+                    if(!empty($response)) {
+                        $updateInfo = [
+                            'send_status'   => 2,
+                            'updated_time'  => date('Y-m-d H:i:s'),
+                            'updated_ip'    => $this->ipAddress,
+                        ];
+                        if (!empty($response['status']) && $response['status'] == 'ok') {
+                            $updateInfo['success_status']   = 1;
+                            $sendSmsLog[$key]['status']     = (!empty($response['message'])?$response['message']:'').' <> Successfully Send Sms';
+                        } else {
+                            $updateInfo['success_status']   = 2;
+                            $sendSmsLog[$key]['status']     = (!empty($response['message'])?$response['message']:''). ' <> Failed to Send Sms';
+                        }
+                    }else{
+
+                        $updateInfo['send_status']    = 2;
+                        $updateInfo['success_status'] = 2;
+                        $updateInfo['updated_at']     = date('Y-m-d H:i:s');
+
+                        $sendSmsLog[$key]['status']         = (!empty($response['message'])?$response['message']:''). ' <> Failed to Send Sms(Response NULL)';
+                    }
+                    $this->db->where('id', $row->id)->update("sms_history",$updateInfo);
+
+                }
+            }
+
+            if(!empty($sendSmsLog)){
+                $si=1;
+                echo "<table border='1px' rules='all' style='border: 1px solid #eee;'>";
+                echo "<tr>";
+                echo "<td>S/N</td>";
+                echo "<td>Mobile Number</td>";
+                echo "<td>Message</td>";
+                echo "<td>Status</td>";
+                echo "</tr>";
+                foreach ($sendSmsLog as $log){
+                    echo "<tr>";
+                    echo "<td>".$si++."</td>";
+                    echo "<td>".$log['mobile_no']."</td>";
+                    echo "<td>".$log['message']."</td>";
+                    echo "<td>".$log['status']."</td>";
+                    echo "</tr>";
+                }
+                echo "</table>";
+            }
+
+        }else{
+            echo "<h1 style='text-align: center;'>No SMS Pending here....</h1>";
+        }
     }
-
 }

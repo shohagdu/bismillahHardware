@@ -24,8 +24,7 @@ class Expenses extends CI_Controller {
     function index() {
         $data['expensehead']        =  $this->SETTINGS->settingInfo(7);
         $data['account']            = $this->SETTINGS->account();
-       // print_r($data['account']);
-       // exit;
+
         $view                       = array();
         $data['title']              = "Expense List";
         $view['content']            = $this->load->view('dashboard/expenses/index', $data, TRUE);
@@ -40,9 +39,10 @@ class Expenses extends CI_Controller {
         $this->load->view('dashboard/index', $view);
     }
     function edit($id) {
-        $data['expensehead']        = $this->SETTINGS->settingInfo(7);
+        $data['expensehead']        =  $this->SETTINGS->settingInfo(7);
         $data['account']            = $this->SETTINGS->account();
-        $data['expenseInfo']        = $this->SETTINGS->get_single_transaction_info(['sha1(transaction_info.id)'=>$id]);
+        $data['expenseInfo']        = $this->REPORT->get_single_transaction_info(['sha1(transaction_info.id)'=>$id]);
+
         $view                       = array();
         $data['title']              = "Update Expense Information";
         $view['content']            = $this->load->view('dashboard/expenses/edit', $data, TRUE);

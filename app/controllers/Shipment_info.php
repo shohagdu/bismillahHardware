@@ -16,6 +16,7 @@ class Shipment_info extends CI_Controller {
         $this->load->model('Products_model', 'PRODUCT', TRUE);
         $this->load->model('Common_model', 'COMMON_MODEL', TRUE);
         $this->load->model('Settings_model', 'SETTINGS', TRUE);
+        $this->load->model('Reports_model', 'REPORT', TRUE);
 
         $this->userId = $this->session->userdata('user');
         $this->dateTime = date('Y-m-d H:i:s');
@@ -189,15 +190,7 @@ class Shipment_info extends CI_Controller {
         $view['content'] = $this->load->view('dashboard/shipment/delivery_info', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
-    public  function shipment_member_info(){
-        $data = array();
-        $view = array();
-        $data['title']='Supplier';
-        $data['type']=2;
-        $data['redierct_page']='shipment_info/shipment_member_info';
-        $view['content'] = $this->load->view('dashboard/settings/customer_member_Info/shipment_member', $data, TRUE);
-        $this->load->view('dashboard/index', $view);
-    }
+
     public function save_shipment_stock_in_info(){
         extract($_POST);
         if(empty($shipmentID)){
@@ -544,21 +537,15 @@ class Shipment_info extends CI_Controller {
     public  function details_member_info($id){
         $data = array();
         $view = array();
-        $data['customer_info']=$this->SETTINGS->get_single_customer_member_info(['id'=>$id]);
-        $data['title']=(($data['customer_info']->type==1)?"Customer Ledger":"Member Ledger"). ' Information';
-        $data['info']= $this->SHIPMENT->shipment_stock_details(['shipment_stock_details.member_id'=>$id,'shipment_stock_details.is_active'=>1]);
+        $data['customer_info']=$this->SETTINGS->get_single_customer_member_info(['customer_shipment_member_info.id'=>$id]);
+        $data['title']=(($data['customer_info']->type==1)?"Supplier Ledger":"Supplier Ledger"). ' Information';
+        $data['info']= $this->SHIPMENT->shipment_stock_details(['transaction_info.customer_member_id'=>$id,'transaction_info.is_active'=>1]);
+
         $view['content'] = $this->load->view('dashboard/reports/customer_member/details_member_info', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
 
-    function member_due_collection() {
-        $data = array();
-        $view = array();
-        $data['title'] = "Supplier Due Collection";
-        $data['shipment_info'] = $this->SHIPMENT->shipment_info();
-        $view['content'] = $this->load->view('dashboard/shipment/member_due_collection', $data, TRUE);
-        $this->load->view('dashboard/index', $view);
-    }
+
     public function save_member_due_collection(){
         extract($_POST);
         $payment_byInfo=[];
@@ -570,7 +557,11 @@ class Shipment_info extends CI_Controller {
         if(empty($member_id)){
             echo json_encode(['status'=>'error','message'=>'Member Name is required','data'=>'']);exit;
         }
-        if(empty($payment_now)){
+        if(empty($accountID)){
+            echo json_encode(['status'=>'error','message'=>'Account Name is required','data'=>'']);exit;
+        }
+
+        if(empty($payment_now) || $payment_now<=0 ){
             echo json_encode(['status'=>'error','message'=>'Payment Amount is required','data'=>'']);exit;
         }
         if(empty($payment_date)){
@@ -581,19 +572,21 @@ class Shipment_info extends CI_Controller {
         if(empty($upId)){
             $this->db->trans_start();
             $data=[
-                'member_id'=>$member_id,
-                'credit_amount '=>$payment_now,
-                'trans_date'=>(!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
-                'payment_by' => (!empty($payment_byInfo)?json_encode($payment_byInfo):''),
-                'type'=>3, // Member Due Collection
-                'remarks'=>$remarks,
-                'created_by'=>$this->userId,
-                'created_time'=>$this->dateTime,
-                'created_ip'=>$this->ipAddress,
+                'transCode'                 => time(),
+                'customer_member_id'        => $member_id,
+                'bank_id'                   => $accountID,
+                'credit_amount'             => $payment_now,
+                'payment_date'              => (!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
+                'payment_by'                => (!empty($payment_byInfo)?json_encode($payment_byInfo):''),
+                'type'                      => 7, // Supplier Payment
+                'remarks'                   => $remarks,
+                'created_by'                => $this->userId,
+                'created_time'              => $this->dateTime,
+                'created_ip'                => $this->ipAddress,
             ];
-            $this->db->insert("shipment_stock_details",$data);
+            $this->db->insert("transaction_info",$data);
 
-            $redierct_page='shipment_info/member_due_collection';
+            $redierct_page='Purchases/supplierPayment';
             $error=$this->db->error();
 
             $this->db->trans_complete();
@@ -610,20 +603,21 @@ class Shipment_info extends CI_Controller {
             // when update
             $this->db->trans_start();
             $data=[
-                'member_id'=>$member_id,
-                'credit_amount '=>$payment_now,
-                'trans_date'=>(!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
-                'payment_by' => (!empty($payment_byInfo)?json_encode($payment_byInfo):''),
-                'type'=>3, // Member Due Collection
-                'remarks'=>$remarks,
-                'updated_by'=>$this->userId,
-                'updated_time'=>$this->dateTime,
-                'updated_ip'=>$this->ipAddress,
+                'customer_member_id'        => $member_id,
+                'bank_id'                   => $accountID,
+                'credit_amount'             => $payment_now,
+                'payment_date'              => (!empty($payment_date)?date('Y-m-d',strtotime($payment_date)):''),
+                'payment_by'                => (!empty($payment_byInfo)?json_encode($payment_byInfo):''),
+                'type'                      => 7, // Supplier Payment
+                'remarks'                   => $remarks,
+                'updated_by'                => $this->userId,
+                'updated_time'              => $this->dateTime,
+                'updated_ip'                => $this->ipAddress,
             ];
             $this->db->where("id",$upId);
-            $this->db->update("shipment_stock_details",$data);
+            $this->db->update("transaction_info",$data);
 
-            $redierct_page='shipment_info/member_due_collection';
+            $redierct_page='Purchases/supplierPayment';
             $this->db->trans_complete();
 
             if($this->db->trans_status()===true){
@@ -678,12 +672,11 @@ class Shipment_info extends CI_Controller {
     public function show_member_due_amount(){
         extract($_POST);
         if(!empty($member_id)){
-           $data=$this->SHIPMENT->show_member_due_amount(['member_id'=>$member_id,'shipment_stock_details.is_active'=>1]);
-           $stockQty=$this->SHIPMENT->show_member_stock_qty(['member_id'=>$member_id]);
-            if(!empty($data)  || !empty($stockQty)){
-                echo json_encode(['status'=>'success','message'=>'Data Found Successfully','data'=>$data,'stock_qty'=>$stockQty]); exit;
+           $data=$this->SHIPMENT->show_member_due_amount(['transaction_info.customer_member_id'=>$member_id,'transaction_info.is_active'=>1]);
+            if(!empty($data)){
+                echo json_encode(['status'=>'success','message'=>'Data Found Successfully','data'=>$data]); exit;
             }else{
-                echo json_encode(['status'=>'error','message'=>'No Data Found ','data'=>'','stock_qty'=>'']); exit;
+                echo json_encode(['status'=>'error','message'=>'No Data Found ','data'=>'']); exit;
             }
         }
     }
@@ -696,24 +689,12 @@ class Shipment_info extends CI_Controller {
     function get_single_shipment_delivery_info() {
        extract($_POST);
        if(!empty($id)) {
-           $ship_delivery_info = $this->SHIPMENT->shipment_delivery_info(['shipment_stock_details.id'=>$id]);
-           if(!empty($ship_delivery_info)){
-               $ship_delivery_info->present_stock_info='';
-               $ship_delivery_info->present_due_amt='';
-
-               // present Stock qty
-               $stockQty=$this->SHIPMENT->show_member_stock_qty(['member_id'=>$ship_delivery_info->member_id]);
-               $ship_delivery_info->present_stock_info=$stockQty+ (($ship_delivery_info->credit_qty)?$ship_delivery_info->credit_qty:0);
-
-               //present due calculation
-               $current_due_amt=$this->SHIPMENT->show_member_due_amount(['member_id'=>$ship_delivery_info->member_id]);
-               $ship_delivery_info->present_due_amt= $current_due_amt - (($ship_delivery_info->credit_amount)?$ship_delivery_info->credit_amount:0);
-
-               echo json_encode(['status'=>'success','message'=>'Data Found Successfully','data'=>$ship_delivery_info]); exit;
-           }else{
-               echo json_encode(['status'=>'error','message'=>'No Data Found ','data'=>'']); exit;
-           }
+           $supplierPaymentInfo        = $this->REPORT->get_single_transaction_info(['transaction_info.id'=>$id]);
+           echo json_encode(['status'=>'success','message'=>'Data Found Successfully','data'=>$supplierPaymentInfo]); exit;
+       }else{
+           echo json_encode(['status'=>'error','message'=>'No Data Found ','data'=>'']); exit;
        }
+
 
     }
 

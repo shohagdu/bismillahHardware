@@ -93,8 +93,8 @@ class Products_model extends CI_Model {
     function productSuggestionPurchase($q) {
         $this->db->select('product_info.*,band.title as bandTitle,source.title as sourceTitle,productType.title as ProductTypeTitle,unitInfo.title as unitTitle',true);
         if(!empty($q)){
-            $this->db->like('product_info.productCode', $q, 'after');
-            $this->db->or_like('product_info.name', $q, 'after');
+            $this->db->like('product_info.name', $q);
+            $this->db->or_like('product_info.productCode', $q);
             $this->db->where('product_info.is_active', 1);
         }
         $this->db->join(' all_settings_info as band', 'band.id = product_info.band_id', 'left');
@@ -111,6 +111,7 @@ class Products_model extends CI_Model {
                 $data[$key]['id'] = $result[$key]['id'];
                 $data[$key]['productCode'] = $result[$key]['productCode'];
                 $data[$key]['productName'] = $result[$key]['name'];
+                $data[$key]['productPrice'] = $result[$key]['purchase_price'];
                 $data[$key]['bandTitle'] = $result[$key]['bandTitle'];
                 $data[$key]['sourceTitle'] = $result[$key]['sourceTitle'];
                 $data[$key]['ProductTypeTitle'] = $result[$key]['ProductTypeTitle'];
@@ -233,18 +234,12 @@ class Products_model extends CI_Model {
 
         $data = array();
         $i=1;
-        $outletID=$this->outletID;
         if(!empty($records)) {
             foreach ($records as $key => $record) {
                 $data[] = $record;
                 $data[$key]->serial_no = (int) $i++;
-
-                $debit_item_info=$this->REPORT->stock_item_count(['stock_info.product_id'=>$record->id,'stock_info.debit_outlet'=>$outletID]);
-                $credit_item_info=$this->REPORT->stock_item_count(['stock_info.product_id'=>$record->id,'stock_info.credit_outlet'=>$outletID]);
-                $data[$key]->current_stock_item = $debit_item_info-$credit_item_info;
-
                 $data[$key]->is_active = ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
-                $data[$key]->action = '<button  class="btn btn-primary  btn-xs" data-toggle="modal" onclick="updateProductInfo('.$record->id.' )" data-target="#productModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button> <a href="'.base_url('reports/details_inventory_report/'.$record->id).'"  class="btn btn-info  btn-xs"  ><i  class="glyphicon glyphicon-pencil"></i> Details</a> <button  class="btn btn-danger  btn-xs" onclick="deleteProductInfo('.$record->id.' )" ><i  class="glyphicon glyphicon-remove"></i> Delete</button> ';
+                $data[$key]->action = '<button  class="btn btn-primary  btn-sm" data-toggle="modal" onclick="updateProductInfo('.$record->id.' )" data-target="#productModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button> <a href="'.base_url('reports/details_inventory_report/'.$record->id).'"  class="btn btn-info  btn-sm"  ><i  class="glyphicon glyphicon-pencil"></i> Details</a> ';
 
             }
         }
@@ -330,49 +325,6 @@ class Products_model extends CI_Model {
             }
         }else{
             return 0;
-        }
-    }
-
-    function productTypeSuggest($q,$type=4) {
-
-        $this->db->select('*');
-        $this->db->from('all_settings_info');
-        $this->db->where('is_active',1);
-        if(!empty($q)){
-            $this->db->like('title', $q, 'after');
-        }
-        $this->db->where('type',$type);
-        $this->db->order_by("id","DESC");
-        $this->db->limit(20);
-        $records = $this->db->get();
-        if($records->num_rows()>0) {
-            $result= $records->result_array();
-            $data = array();
-            foreach ($result as $key => $value) {
-                $data[$key]['id']           = $result[$key]['id'];
-                $data[$key]['value']        = $result[$key]['title'];
-            }
-            return $data;
-        }else{
-            return  false;
-        }
-    }
-
-    public function singleProductInfo($where=NULL){
-        $this->db->select('product_info.*,band.title as bandTitle,source.title as sourceTitle,productType.title as ProductTypeTitle,unitInfo.title as unitTitle');
-        if(!empty($where)){
-            $this->db->where($where);
-        }
-        $this->db->join(' all_settings_info as band', 'band.id = product_info.band_id', 'left');
-        $this->db->join('all_settings_info as source', 'source.id = product_info.source_id', 'left');
-        $this->db->join(' all_settings_info as productType', 'productType.id = product_info.product_type', 'left');
-        $this->db->join(' all_settings_info as unitInfo', 'unitInfo.id = product_info.unit_id', 'left');
-        $this->db->order_by("name", "ASC");
-        $records = $this->db->get('product_info');
-        if($records->num_rows()>0) {
-            return $records->row();
-        }else{
-            return  false;
         }
     }
 

@@ -7,7 +7,7 @@ class Cashbook extends CI_Controller {
     function __construct() {
         parent::__construct();
 
-        $user=$this->session->userdata('user');
+         $user=$this->session->userdata('user');
         if (empty($user)) {
             $this->session->set_flashdata('msg', '<div style="text-align: center;font-weight:bold;padding-bottom: 5px;">Please Login!!!</div>');
             redirect(base_url('login'));
@@ -54,15 +54,15 @@ class Cashbook extends CI_Controller {
             $this->session->set_flashdata('msg', validation_errors());
             redirect(base_url('cashbook/Accountcreate'));
         }
-        $bank= $this->input->post('accountType');
-
+       $bank= $this->input->post('accountType');
+		
         if ($bank == 'BANK') {
-            $accountNumber=$this->input->post('accountNumber');
-            $accBranc=$this->input->post('accountBranchName');
+        $accountNumber=$this->input->post('accountNumber');
+        $accBranc=$this->input->post('accountBranchName');
             if (
-                (empty($accountNumber) || trim($accountNumber) == '')
-                ||
-                (empty($accBranc) || trim($accBranc) == '')
+                    (empty($accountNumber) || trim($accountNumber) == '')
+                    ||
+                    (empty($accBranc) || trim($accBranc) == '')
             ) {
                 $this->session->set_flashdata('msg', '<div style="text-align: center;font-weight:bold;padding-bottom: 5px;padding-top:10px;">Account Number & Branch Name is Required!</div>');
                 redirect(base_url('cashbook/Accountcreate'));
@@ -108,20 +108,21 @@ class Cashbook extends CI_Controller {
             redirect(base_url('cashbook/Accountedit/' . $this->input->post('accountID')));
         }
 
-        $bank= $this->input->post('accountType');
-
+         $bank= $this->input->post('accountType');
+		
         if ($bank == 'BANK') {
-            $accountNumber=$this->input->post('accountNumber');
-            $accBranc=$this->input->post('accountBranchName');
+        $accountNumber=$this->input->post('accountNumber');
+        $accBranc=$this->input->post('accountBranchName');
             if (
-                (empty($accountNumber) || trim($accountNumber) == '')
-                ||
-                (empty($accBranc) || trim($accBranc) == '')
+                    (empty($accountNumber) || trim($accountNumber) == '')
+                    ||
+                    (empty($accBranc) || trim($accBranc) == '')
             ) {
                 $this->session->set_flashdata('msg', '<div style="text-align: center;font-weight:bold;padding-bottom: 5px;padding-top:10px;">Account Number & Branch Name is Required!</div>');
                 redirect(base_url('cashbook/Accountedit/' . $this->input->post('accountID')));
             }
         }
+
         if ($this->CASHBOOK->updateAccount($this->input->post())) {
             $this->session->set_flashdata('msg', '<div style="text-align: center;font-weight:bold;padding-bottom: 5px;padding-top:10px;">Account updated!</div>');
             redirect(base_url('cashbook/Accountindex'));
@@ -301,136 +302,6 @@ class Cashbook extends CI_Controller {
         $data['transType']              = $this->SETTINGS->transactionType();
         $this->load->view('dashboard/cashbook/accounts/statement/accountsStatementAction', $data);
 
-    }
-
-    function bankTransaction() {
-        $data = array();
-        $data['account'] = $this->CASHBOOK->accountBalance();
-        $view = array();
-        $data['title'] = "Accounts Records";
-        $view['content'] = $this->load->view('dashboard/cashbook/transactionHistory', $data, TRUE);
-        $this->load->view('dashboard/index', $view);
-    }
-
-    function bankTransactionAction() {
-        extract($_POST);
-        $this->db->trans_start();
-        if(empty($account_id)){
-            echo json_encode(['status'=>'error','message'=>'Account No is required','data'=>'']);exit;
-        }
-        if(empty($transType)){
-            echo json_encode(['status'=>'error','message'=>'Transaction Type is required','data'=>'']);exit;
-        }
-        if(empty($amount)){
-            echo json_encode(['status'=>'error','message'=>'Transaction amount is required','data'=>'']);exit;
-        }
-        if(empty($date)){
-            echo json_encode(['status'=>'error','message'=>'Transaction Date is required','data'=>'']);exit;
-        }
-
-        if(empty($upId)) {
-            $transaction = [
-                'transCode'             =>  time(),
-                'payment_date'          =>  (!empty($date)?date('Y-m-d',strtotime($date)):''),
-                'type'                  => $transType,
-                'bank_id'               => $account_id,
-                'debit_amount'          => '0.00',
-                'credit_amount'         => '0.00',
-                'remarks'               => $note,
-                'is_bank_transaction'   => 2,
-                'created_by'            => $this->userId,
-                'created_time'          => $this->dateTime,
-                'created_ip'            => $this->ipAddress,
-            ];
-            if($transType==4){
-                $transaction['debit_amount']=$amount;
-            }else{
-                $transaction['credit_amount']=$amount;
-            }
-
-            $this->db->trans_complete();
-            if($this->db->trans_status()===true){
-                $this->db->trans_commit();
-                $this->db->insert("transaction_info", $transaction);
-                $message='Successfully Save Information';
-                echo json_encode(['status'=>'success','message'=>$message]); exit;
-            }else{
-                $this->db->trans_rollback();
-                $message='Fetch a problem, data not Saved';
-                echo json_encode(['status'=>'success','message'=>$message]);exit;
-            }
-
-        }else{
-
-            $transaction = [
-                'transCode'             =>  time(),
-                'payment_date'          =>  (!empty($date)?date('Y-m-d',strtotime($date)):''),
-                'type'                  => $transType,
-                'bank_id'               => $account_id,
-                'debit_amount'          => '0.00',
-                'credit_amount'         => '0.00',
-                'remarks'               => $note,
-                'is_bank_transaction'   => 2,
-                'updated_by'            => $this->userId,
-                'updated_time'          => $this->dateTime,
-                'updated_ip'            => $this->ipAddress,
-            ];
-            if($transType==4){
-                $transaction['debit_amount']=$amount;
-            }else{
-                $transaction['credit_amount']=$amount;
-            }
-
-            $this->db->trans_complete();
-            if($this->db->trans_status()===true){
-                $this->db->trans_commit();
-                $this->db->where('id',$upId);
-                $this->db->update("transaction_info", $transaction);
-                $message='Successfully Update Information';
-                echo json_encode(['status'=>'success','message'=>$message]); exit;
-            }else{
-                $this->db->trans_rollback();
-                $message='Fetch a problem, data not Update';
-                echo json_encode(['status'=>'success','message'=>$message]);exit;
-            }
-        }
-    }
-
-    public function showTransactionInfo(){
-        $postData = $this->input->post();
-        $data = $this->CASHBOOK->showExpensesInfo($postData);
-        echo json_encode($data);
-    }
-
-    public function deleteTransactionInfo(){
-        extract($_POST);
-        $this->db->trans_start();
-        if(empty($id)){
-            echo json_encode(['status'=>'error','message'=>'ID is required','data'=>'']);exit;
-        }
-        $info = array(
-            'is_active'         => 0,
-            'updated_by'        => $this->userId,
-            'updated_time'      => $this->dateTime,
-            'updated_ip'        => $this->ipAddress,
-        );
-        $this->db->where('id', $id);
-        $this->db->where_in('type', [4,5]);
-        $this->db->update("transaction_info", $info);
-
-        $message = 'Successfully Delete this Information';
-
-        $this->db->trans_complete();
-        if ($this->db->trans_status() === true) {
-            $this->db->trans_commit();
-            echo json_encode(['status' => 'success', 'message' => $message]);
-            exit;
-        } else {
-            $this->db->trans_rollback();
-            echo json_encode(['status' => 'error', 'message' => 'Fetch a problem, data not update',
-                'redirect_page' => '']);
-            exit;
-        }
     }
 
 }

@@ -69,19 +69,16 @@ class Reports extends CI_Controller {
         $data['products'] = $this->PRODUCTS->get_single_product_info(['product_info.id'=>$id]);
         $data['title'] = "Details Inventory Report of";
         $data['info']=$this->REPORT->details_inventory_report($id,$this->outletID);
-//        echo "<pre>";
-//        print_r($data['info']);
-//        exit;
         $view['content'] = $this->load->view('dashboard/reports/inventory/details_inventory_report', $data,TRUE);
         $this->load->view('dashboard/index', $view);
     }
     public  function details_customer_member_info($id){
         $data = array();
         $view = array();
-        $data['customer_info']=$this->SETTINGS->get_single_customer_member_info(['id'=>$id]);
+        $data['customer_info']=$this->SETTINGS->get_single_customer_member_info(['customer_shipment_member_info.id'=>$id]);
+        $data['transactionType']=$this->SETTINGS->transactionType();
         $data['title']=(($data['customer_info']->type==1)?"Customer Ledger":"Member Ledger"). ' Information';
         $data['info']= $this->REPORT->get_transaction_info(['transaction_info.customer_member_id'=>$id]);
-
         $view['content'] = $this->load->view('dashboard/reports/customer_member/details_customer_member_info', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
@@ -273,7 +270,7 @@ function dailySalesReports() {
         $data = array();
         $view = array();
         $data['title']          = "Expense Reports";
-        $data['info']           = $this->REPORT->get_transaction_infoNew($param);
+        $data['info']           = $this->REPORT->get_transaction_info($param);
         $view['content']        = $this->load->view('dashboard/reports/expense/expReports', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
@@ -290,83 +287,48 @@ function dailySalesReports() {
             return "Date is required.";
         }
         $param['transaction_info.type']             = 8;
-        $data['info']=$this->REPORT->get_transaction_infoNew($param);
-
+        $data['info']=$this->REPORT->get_transaction_info($param);
         return  $this->load->view('dashboard/reports/expense/searchingexpReports', $data);
     }
 
-    function bestSales() {
+    function customerStatement() {
         $data = array();
         $view = array();
-
-        $data['title']                  =   "Best Sales Reports";
-        $outlet_id                      =   $this->outletID;
-        $data['outlet_info']            =   $this->SETTINGS->outlet_info();
-        $data['info']                   =   $this->REPORT->bestSalesReport(['firstDate'=>date('Y-m-01'),'toDate'=>date('Y-m-d')],$outlet_id);
-        $view['content']                =   $this->load->view('dashboard/reports/sales/bestSales', $data, TRUE);
+        $data['title'] = "Customer Statement";
+        $outlet_id=$this->outletID;
+        $data['info']=$this->REPORT->customerStatement(['outletID'=>$outlet_id,'typeID'=>1]);
+        $view['content'] = $this->load->view('dashboard/reports/customer_member/customerStatement', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
-    function searchingBestSales() {
-        extract($_POST);
-        $data = array();
-        $param=[];
-        $date=$this->input->post('searchingDate');
-        if($date!=''){
-            $exp_date=explode("-",$date);
-            $param['firstDate']      =    $exp_date[0];
-            $param['toDate']         =    $exp_date[1];
-        }
-        if(!empty($salesID)){
-            unset($param['firstDate']);
-            unset($param['toDate']);
-        }
-        $data['info']=$this->REPORT->bestSalesReport($param);
-        return   $this->load->view('dashboard/reports/sales/searchingBestSales', $data);
-    }
-    function expOverviewReports() {
+    function supplierStatement() {
         $data = array();
         $view = array();
-        $data['title']          = "Month Wise Expense Reports";
-        $data['info']           = $this->REPORT->getExpenseOverview();
-        $view['content']        = $this->load->view('dashboard/reports/expense/expOverviewReports', $data, TRUE);
+        $data['title'] = "Supplier Statement";
+        $outlet_id=$this->outletID;
+        $data['info']=$this->REPORT->supplierStatement(['outletID'=>$outlet_id,'typeID'=>2]);
+        $view['content'] = $this->load->view('dashboard/reports/customer_member/customerStatement', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
-
-    function searchingExpOverviewReports() {
-        extract($_POST);
-        $data = array();
-        $param=[];
-        $date=$this->input->post('searchingDate');
-        if($date!=''){
-            $exp_date=explode("-",$date);
-            $param['firstDate']      =    $exp_date[0];
-            $param['toDate']         =    $exp_date[1];
-        }else{
-            return "Date is required.";
-        }
-        $data['info']           = $this->REPORT->getExpenseOverview($param);
-
-        return  $this->load->view('dashboard/reports/expense/searchingExpOverviewReports', $data);
-    }
-
-    function salesOverview() {
+    function dailyStatements() {
         $data = array();
         $view = array();
-        $data['title']      = "Sales Overview Reports";
-        extract($_POST);
-        $param=[];
-        if(isset($searchBtn)) {
-            if (!empty($fromDate)) {
-                $param['fromDate'] = date('Y-m-01',strtotime($fromDate));
-            }
-            if (!empty($toDate)) {
-                $param['toDate'] = date('Y-m-t',strtotime($toDate));
-            }
-            $data['searchDateRange']    =   "Report date Range: ".(!empty($param['fromDate'])?date('d M, Y',strtotime($param['fromDate'])):'')." to ".(!empty($param['toDate'])?date('d M, Y',strtotime($param['toDate'])):'');
-        }
+        $data['title']                  = "Daily Statement";
+        $outlet_id                      = $this->outletID;
+        $data['sales']                  = $this->REPORT->dailySalesReport('',$outlet_id);
+        $data['customerCollection']     = $this->SETTINGS->customerDueCollection('');
+        $data['purchaseInfo']           = $this->REPORT->purchaseStatement('');
+        $data['supplierPayment']        = $this->REPORT->supplierPayment('');
+        $expParam['transaction_info.type']             = 8;
+        $expParam['transaction_info.payment_date']     = date('Y-m-d');
+        $data['expense']                                = $this->REPORT->get_transaction_info($expParam);
 
-        $data['info']       =   $this->REPORT->salesOverview($param);
-        $view['content']    =   $this->load->view('dashboard/reports/sales/salesOverview', $data, TRUE);
+
+
+
+        $view['content'] = $this->load->view('dashboard/reports/statement/dailyStatements', $data, TRUE);
         $this->load->view('dashboard/index', $view);
     }
+
+
+
 }

@@ -18,7 +18,7 @@
                         </div>
 
                         <div class="col-sm-2" style="margin-top:25px;">
-                            <button type="button" onclick="searchingExpenseReports()" class="btn btn-info search_btn" ><i
+                            <button type="button" onclick="searchingDailySalesReports()" class="btn btn-info search_btn" ><i
                                     class="glyphicon
                             glyphicon-search" ></i> Search</button>
                         </div>

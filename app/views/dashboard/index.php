@@ -31,7 +31,7 @@
         <div class="wrapper">
             <header class="main-header">
                 <a href="<?php echo base_url(); ?>" class="logo">
-                    <span class="logo-lg" style="font-size: 16px !important;">BISMILLAH HARDWARE</span>
+                    <span class="logo-lg">Bismillah Hardware</span>
                 </a>
                 <!-- Header Navbar: style can be found in header.less -->
                 <nav class="navbar navbar-static-top">

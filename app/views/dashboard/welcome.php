@@ -10,45 +10,47 @@
                         <div class="small-box bg-aqua">
                             <div class="inner">
                                 <div style="height:35px;">
-                                    <h4 style=" text-align: center"><?php echo (!empty($todaySalesInfo)?$todaySalesInfo:'0.00') ?></h4>
+                                    <h3 style=" text-align: center;font-weight: bold;"><?php echo (!empty
+                                        ($todaySalesInfo->totalSale)
+                                            ?$todaySalesInfo->totalSale:'0.00') ?></h3>
                                 </div>
                                 <hr>
-                                <p style="font-size: 14px; text-align: center">TODAY SALES </p>
+                                <p style="font-size: 18px; text-align: center;font-weight: bold">TODAY SALES </p>
                             </div>
-
                         </div>
                     </div>
+
                 </a>
-                <a href="#">
-                    <div class="col-md-4">
-                        <div class="small-box bg-maroon-gradient">
-                            <div class="inner">
-                                <div style="height:35px;">
-                                    <h4 style=" text-align: center"><?php echo (!empty($todayDueCollection)?$todayDueCollection:'0.00') ?></h4>
+                <?php
+                $bg=[
+                        3   =>  'bg-yellow',
+                        6   =>  'bg-aqua',
+                        7   =>  'bg-green',
+                        8   =>  'bg-yellow',
+                        11  =>  'bg-blue',
+                        12  =>  'bg-red',
+                ];
+                if(!empty($transSummery)){
+                    foreach ($transSummery as $sumKey=> $summery){
+                ?>
+                        <div class="col-md-4">
+                            <div class="small-box <?php echo (!empty($bg[$sumKey])?$bg[$sumKey]:'bg-aqua'); ?>">
+                                <div class="inner">
+                                    <div style="height:35px;">
+                                        <h3 style=" text-align: center;font-weight: bold;"><?php echo (!empty($summery)
+                                                ?$summery:'0.00') ?></h3>
+                                    </div>
+                                    <hr>
+                                    <p style="font-size: 18px; text-align: center;font-weight: bold"><?php echo (!empty
+                                        ($transactionType[$sumKey])
+                                            ?$transactionType[$sumKey]:''); ?> </p>
                                 </div>
-                                <hr>
-                                <p style="font-size: 14px; text-align: center">TODAY DUE COLLECT </p>
                             </div>
-
                         </div>
-                    </div>
-                </a>
-                <a href="<?php   echo ((!empty($isSuperAdmin) && $isSuperAdmin=='superadmin')? base_url('Reports/expReports'):'')?>">
-                    <div class="col-md-4">
-                        <div class="small-box bg-green">
-                            <div class="inner">
-                                <div style="height:35px;">
-                                    <h4 style=" text-align: center"><?php echo (!empty($todayExpenseInfo)?$todayExpenseInfo:'0.00') ?></h4>
-                                </div>
-                                <hr>
-                                <p style="font-size: 14px; text-align: center">TODAY EXPENSE </p>
-                            </div>
-
-                        </div>
-                    </div>
-                </a>
-
-
+                <?php
+                    }
+                }
+                ?>
             </div>
         </div>
     </section>

@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="<?php echo base_url(); ?>assets/bootstrap/fonts/css/ionicons.min.css">
     <link rel="stylesheet" href="<?php echo base_url(); ?>assets/bootstrap/fonts/css/jquery-ui.css">
 
-
+    <link rel="stylesheet" href="<?php echo base_url(); ?>assets/plugins/select2/select2.min.css" >
     <link rel="stylesheet" href="<?php echo base_url(); ?>assets/dist/css/AdminLTE.min.css">
     <link rel="stylesheet" href="<?php echo base_url(); ?>assets/dist/css/skins/_all-skins.min.css">
 
@@ -122,34 +122,8 @@
         .paymentBy{
             font-weight: bold;
             vertical-align: middle !important;
-
-
-
-        }
-        .rotatedPaymentBy{
-            background-color: darkred;
-            color:white;
-            padding: 5px;
-            vertical-align: middle;
-            text-align: center;
-            /** Rotation */
-            -webkit-transform: rotate(-90deg);
-            -moz-transform: rotate(-90deg);
-            transform:rotate(-90deg);
-            width: 100px;
         }
 
-        /*@media screen and (min-width: 601px) {*/
-        /*    * {*/
-        /*        font-size: 15px;*/
-        /*    }*/
-        /*}*/
-
-        @media screen and (max-width: 600px) {
-            * {
-                font-size: 10px;
-            }
-        }
 
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -161,7 +135,7 @@
         <nav class="navbar navbar-static-top">
             <div class="container-fluid">
                 <div class="navbar-header pull-left">
-                    <a href="<?php echo base_url('welcome'); ?>" class="navbar-brand"><b>RED GREEN</b></a>
+                    <a href="<?php echo base_url('welcome'); ?>" class="navbar-brand"><b>Bismillah Hardware</b></a>
                 </div>
                 <div class="navbar-custom-menu pull-right">
                     <ul class="nav navbar-nav">

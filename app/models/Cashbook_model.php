@@ -80,39 +80,74 @@ class Cashbook_model extends CI_Model {
         }
     }
 
-    function updateAccount($data) {
+    function updateAccount($data)
+    {
         $this->db->where('accountID', $data['accountID']);
         if ($data['accountType'] == 'CASH') {
-            $data['accountNumber'] = NULL;
-            $data['accountBranchName'] = NULL;
+            $data['accountNumber']      = NULL;
+            $data['accountBranchName']  = NULL;
         }
         $this->db->update('tbl_pos_accounts', array(
-            'accountName'               => $data['accountName'],
-            'accountType'               => $data['accountType'],
-            'accountNumber'             => $data['accountNumber'],
-            'accountBranchName'         => $data['accountBranchName'],
-            'openingBal'                => $data['openingBal'],
-            'note'                      => trim($data['note']),
-            'softDelete'                => $data['softDelete'],
-            'updated_by'                =>  $this->userId,
-            'updated_time'              =>  $this->dateTime,
-            'updated_ip'                =>  $this->ipAddress,
+            'accountName'           => $data['accountName'],
+            'accountType'           => $data['accountType'],
+            'accountNumber'         => $data['accountNumber'],
+            'accountBranchName'     => $data['accountBranchName'],
+            'openingBal'            => $data['openingBal'],
+            'note'                  => trim($data['note']),
+            'softDelete'            => $data['softDelete'],
+            'updated_by'            => $this->userId,
+            'updated_time'          => $this->dateTime,
+            'updated_ip'            => $this->ipAddress,
 
         ));
-        $payment_transaction=[
-            'debit_amount'              =>  $data['openingBal'],
-            'type'                      =>  4,
-            'remarks'                   =>  $data['note'],
-            'is_opening_balance'        =>  2,
-            'updated_by'                =>  $this->userId,
-            'updated_time'              =>  $this->dateTime,
-            'updated_ip'                =>  $this->ipAddress,
-        ];
-        $this->db->where('is_opening_balance', 2);
-        $this->db->where('bank_id', $data['accountID']);
-        $this->db->update("transaction_info",$payment_transaction);
+        $openingBalTransaction = self::checkingBankOpeningBalanceExist($data['accountID']);
+        if (!empty($openingBalTransaction) && $openingBalTransaction['status'] == 'success'){
+            // New Insert
+            $payment_transaction = [
+                'payment_date'          => date('Y-m-d'),
+                'bank_id'               => $data['accountID'],
+                'debit_amount'          => $data['openingBal'],
+                'type'                  => 4,
+                'remarks'               => $data['note'],
+                'is_opening_balance'    => 2,
+                'created_by'            => $this->userId,
+                'created_time'          => $this->dateTime,
+                'created_ip'            => $this->ipAddress,
+            ];
+            $this->db->insert("transaction_info", $payment_transaction);
+            return TRUE;
+        }else{
+            // Update
+            $payment_transaction = [
+                'debit_amount'          => $data['openingBal'],
+                'type'                  => 4,
+                'remarks'               => $data['note'],
+                'is_opening_balance'    => 2,
+                'updated_by'            => $this->userId,
+                'updated_time'          => $this->dateTime,
+                'updated_ip'            => $this->ipAddress,
+            ];
+            $this->db->where('is_opening_balance', 2);
+            $this->db->where('bank_id', $data['accountID']);
+            $this->db->update("transaction_info", $payment_transaction);
+            return TRUE;
 
-        return TRUE;
+        }
+    }
+    function checkingBankOpeningBalanceExist($accountID)
+    {
+        $this->db->select('*');
+        $this->db->from('transaction_info');
+        $this->db->where('transaction_info.type', 4);
+        $this->db->where('transaction_info.is_opening_balance', 2);
+        $this->db->where('transaction_info.is_active', 1);
+        $this->db->where('bank_id', $accountID);
+        $query_result = $this->db->get();
+        if ($this->db->affected_rows() > 0) {
+            return ['status'=>'error','message'=>'Already Exist Data','data'=> $query_result->row()];
+        }else{
+            return ['status'=>'success','message'=>'No Exist Data','data'=> []];
+        }
     }
 
     function destroyAccount($accountID) {
@@ -258,7 +293,7 @@ class Cashbook_model extends CI_Model {
         $query_result = $this->db->get();
         $result = $query_result->result();
         if (empty($result)) {
-
+            
         } else {
             return $result[0]->balance;
         }
@@ -296,9 +331,9 @@ class Cashbook_model extends CI_Model {
         }
         //return $searchQuery;
         ## Total number of records without filtering
-        $totalRecords=$this->__get_count_row('transaction_info',$searchQuery);
+        $totalRecords=$this->__get_count_row_inner_join('transaction_info',$searchQuery);
         ## Total number of record with filtering
-        $totalRecordwithFilter=$this->__get_count_row('transaction_info',$searchQuery);
+        $totalRecordwithFilter=$this->__get_count_row_inner_join('transaction_info',$searchQuery);
         ## Fetch records
         $this->db->select("transaction_info.*,tbl_pos_accounts.accountName,tbl_pos_accounts.accountNumber,fromBankInfo.accountName as fromBankName,fromBankInfo.accountNumber as fromBankAccNo",
             FALSE);
@@ -367,90 +402,5 @@ class Cashbook_model extends CI_Model {
         }else{
             return false;
         }
-    }
-
-    public function showExpensesInfo($postData){
-        $draw = $postData['draw'];
-        $start = $postData['start'];
-        $rowperpage = $postData['length'];
-        $searchInfo = (!empty($postData['search']['value'])?$postData['search']['value']:'');
-
-        //all default searching
-        $search_arr[] = " transaction_info.type IN (4,5) ";
-        $search_arr[] = " transaction_info.is_active = 1 ";
-        $search_arr[] = " transaction_info.is_bank_transaction = 2 ";
-
-        // Custom search filter
-        $bankID             = !empty($postData['bankID'])?$postData['bankID']:'';
-        $dateRange          = !empty($postData['dateRange'])?$postData['dateRange']:'';
-
-        if (!empty($bankID)) {
-            $search_arr[] = " transaction_info.bank_id = '" . $bankID."'" ;
-        }
-        if (!empty($dateRange)) {
-            $exp_date=explode("-",$dateRange);
-            $firstDate      =    $exp_date[0];
-            $toDate         =    $exp_date[1];
-            $search_arr[] = " transaction_info.payment_date >='". $firstDate."'" ;
-            $search_arr[] = " transaction_info.payment_date <='". $toDate."'" ;
-        }
-        if(count($search_arr) > 0){
-            $searchQuery = implode(" and ",$search_arr);
-        }
-        //return $searchQuery;
-        ## Total number of records without filtering
-        $totalRecords=$this->__get_count_row('transaction_info',$searchQuery);
-        ## Total number of record with filtering
-        $totalRecordwithFilter=$this->__get_count_row('transaction_info',$searchQuery);
-        ## Fetch records
-        $this->db->select("transaction_info.*, tbl_pos_accounts.accountName,tbl_pos_accounts.accountNumber",
-            FALSE);
-        if($searchQuery != ''){
-            $this->db->where($searchQuery);
-        }
-        if($searchInfo != ''){
-            $this->db->like('transCode', $searchInfo);
-            $this->db->or_like('debit_amount', $searchInfo);
-            $this->db->or_like('credit_amount', $searchInfo);
-        }
-        $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = transaction_info.bank_id', 'left');
-        $this->db->order_by("transaction_info.id", "DESC");
-        $this->db->limit($rowperpage, $start);
-        $records = $this->db->get('transaction_info')->result();
-        $data = array();
-        $i=(!empty($start)?$start+1:1);
-        if(!empty($records)) {
-            foreach ($records as $key => $record) {
-                $action='';
-                $data[] = $record;
-                $data[$key]->serial_no = (int) $i++;
-                $data[$key]->payment_date_title = date('d M, Y',strtotime($record->payment_date));
-                $data[$key]->transType = ($record->type==4)?"<span class='badge bg-green-active'> Deposit (+)</span>":(
-                    ($record->type==5)?"<span class='badge bg-red'>Withdraw (-)
-                </span>":"");
-                $data[$key]->transAmount = ($record->type==4)?$record->debit_amount:(
-                    ($record->type==5)?"$record->credit_amount":"0.00");
-
-                $action .= ' <button type="button" class="btn btn-info btn-xs
-                  "  data-toggle="modal" onclick="updateTransactionInfo(' . $record->id . ')"
-                            data-target="#transactionModal" title="Record"><i class="glyphicon glyphicon-pencil"></i> Edit</button> ';
-
-                if ($this->session->userdata('abhinvoiser_1_1_role') == 'superadmin') {
-                    $action .= ' <button onclick="deleteTransactionInformation(' . $record->id . ')"  type="button" class="btn btn-danger  btn-xs"   ><i  class="glyphicon glyphicon-remove"></i> Delete</button> ';
-
-
-                }
-
-                $data[$key]->action = $action;
-            }
-        }
-        ## Response
-        $response = array(
-            "draw" => intval($draw),
-            "iTotalRecords" => $totalRecords,
-            "iTotalDisplayRecords" => $totalRecordwithFilter,
-            "aaData" => $data
-        );
-        return $response;
     }
 }

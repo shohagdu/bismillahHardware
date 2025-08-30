@@ -135,9 +135,8 @@ class Settings_model extends CI_Model {
         }
     }
 
+    /*
     public function SendSms($mobile,$sms) {
-
-
         $url = 'http://worldit.powersms.net.bd/httpapi/sendsms';
         $fields = array(
             'userId' => urlencode('duclub'),
@@ -219,7 +218,7 @@ class Settings_model extends CI_Model {
             }
         }
     }
-
+*/
 
     
      public function get_sms_info(){
@@ -263,11 +262,10 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         if(!empty($type)){
             $this->db->where('type',$type);
         }
-        $this->db->order_by("id","DESC");
+        $this->db->order_by("title","ASC");
         $query_result = $this->db->get();
-        $result = $query_result->result();
         if($this->db->affected_rows()>0) {
-            return $result;
+            return $query_result->result();
         }else{
             return false;
         }
@@ -372,13 +370,12 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         ## Total number of record with filtering
         $totalRecordwithFilter=$this->__get_count_row('customer_shipment_member_info',$searchQuery);
         ## Fetch records
-        $this->db->select("customer_shipment_member_info.*,outlet_setup.name as outlet_name,outlet_setup.address as outlet_address ,sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit,(sum(t.debit_amount) - sum(t.credit_amount)) as current_due",false);
+        $this->db->select("customer_shipment_member_info.*,outlet_setup.name as outlet_name,outlet_setup.address as outlet_address ,sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit,(sum(t.credit_amount) - sum(t.debit_amount)) as current_due",false);
         if($searchQuery != ''){
             $this->db->where($searchQuery);
         }
         $this->db->join('outlet_setup', 'outlet_setup.id = customer_shipment_member_info.outlet_id', 'left');
-        $this->db->join('transaction_info as t', 't.customer_member_id = customer_shipment_member_info.id AND t.is_active=1', 'left');
-        $this->db->order_by("current_due", "DESC");
+        $this->db->join('transaction_info as t', 't.customer_member_id = customer_shipment_member_info.id', 'left');
         $this->db->order_by("customer_shipment_member_info.name", "ASC");
         $this->db->limit($rowperpage, $start);
         $this->db->group_by("customer_shipment_member_info.id");
@@ -387,22 +384,17 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         $i=1;
         if(!empty($records)) {
             foreach ($records as $key => $record) {
-                $action='';
                 $data[] = $record;
                 $data[$key]->serial_no = (int) $i++;
                 $data[$key]->is_active =  ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
                 if($record->type==1) {
-                    $cuDue= $record->total_debit- $record->total_credit;
-                    $data[$key]->current_due = (!empty($cuDue)) ? "<span class='badge' style='background-color:red;'>"
-                        . number_format($cuDue,2) . "</span>" : "<span class='badge'>0.00</span>";
+                    $currentDueAmnt=($record->total_credit - $record->total_debit);
+                    $data[$key]->current_due = (!empty($currentDueAmnt) &&
+                        $currentDueAmnt>0) ? "<span class='badge' style='background-color:red;'>"
+                        . number_format($currentDueAmnt,2) . "</span>" : "<span class='badge' style='background-color:green;'>".number_format
+                        ($currentDueAmnt,2)."</span>";
 
-                    $action .= '<button  class="btn btn-primary  btn-xs" data-toggle="modal" onclick="updateCustomerMemberInfo(' . $record->id . ' )" data-target="#myModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button>   <a  class="btn btn-info  btn-xs"  href="' . base_url('reports/details_customer_member_info/' . $record->id) . ' " ><i  class="glyphicon glyphicon-share-alt"></i> Ledger</a> ';
-                    if ($this->session->userdata('abhinvoiser_1_1_role') == 'superadmin') {
-                        $action .= ' <button  class="btn btn-danger  btn-xs" onclick="deleteCustomerMemberInfo(' .
-                            $record->id . ',1 )" ><i  class="glyphicon glyphicon-remove"></i> Delete</button>';
-                    }
-
-                    $data[$key]->action = $action;
+                    $data[$key]->action = '<button  class="btn btn-primary  btn-sm" data-toggle="modal" onclick="updateCustomerMemberInfo(' . $record->id . ' )" data-target="#myModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button> <a  class="btn btn-info  btn-sm"  href="' . base_url('reports/details_customer_member_info/' . $record->id) . ' " ><i  class="glyphicon glyphicon-share-alt"></i> Ledger</a> ';
                 }else{
                     // This is for member
                     $data[$key]->current_due = '0.00';
@@ -422,19 +414,14 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         return $response;
     }
     function checkingDueExitMember($param){
-        $this->db->select("sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit,(sum(t.debit_amount) - sum(t.credit_amount)) as current_due",false);
+        $this->db->select("customer_shipment_member_info.*,IF(sum(t.debit_qty)>0,sum(t.debit_qty),0) as total_debit,IF(sum(t.credit_qty)>0,sum(t.credit_qty),0)  as total_credit,(sum(t.debit_qty) - IF(sum(t.credit_qty)>0, sum(t.credit_qty),0)) as current_due_qty,IF(sum(t.credit_amount)>0,sum(t.credit_amount),0)  as total_credit_amount",false);
         if($param != ''){
             $this->db->where($param);
         }
-        $this->db->where('t.is_active',1);
-        $records = $this->db->get('transaction_info as t');
+        $this->db->join('shipment_stock_details as t', 't.member_id = customer_shipment_member_info.id', 'left');
+        $records = $this->db->get('customer_shipment_member_info');
         if($records->num_rows()>0){
-             $row=$records->row();
-             if(!empty($row)){
-                 return $row->total_debit-$row->total_credit;
-             }else{
-                 return false;
-             }
+            return $records->row();
         }else{
             return false;
         }
@@ -457,11 +444,12 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
     }
     function get_single_customer_member_info($where=NULL)
     {
-        $this->db->select('*');
+        $this->db->select('customer_shipment_member_info.*,transaction_info.type,transaction_info.credit_amount,transaction_info.debit_amount');
         $this->db->from('customer_shipment_member_info');
         if(!empty($where)) {
             $this->db->where($where);
         }
+        $this->db->join('transaction_info','transaction_info.customer_member_id = customer_shipment_member_info.id AND transaction_info.is_opening_balance=2','left');
         $query_result = $this->db->get();
         if($query_result->num_rows()>0) {
             return $query_result->row();
@@ -557,7 +545,6 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         }else {
             $this->db->where(['c.type' => 1]);
         }
-        $this->db->where(['c.is_active' => 1]);
         $this->db->order_by("c.name","ASC");
         $this->db->limit(10);
         $query_result = $this->db->get();
@@ -580,17 +567,18 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
     }
 
     public function customer_member_current_due($where){
-            $this->db->select("sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit,(sum(t.debit_amount) - sum(t.credit_amount)) as balance");
+            $this->db->select("sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit ,(SUM(IF(t.credit_amount != 'NULL', t.credit_amount, 0))-SUM(IF(t.debit_amount != 'NULL', t.debit_amount, 0))) as balance",false);
             $this->db->from('transaction_info as t');
             if(!empty($where)) {
                 $this->db->where($where);
             }
             $this->db->where("t.is_active",1);
+            $this->db->group_by("t.customer_member_id");
             $query_result = $this->db->get();
             if($query_result->num_rows()>0) {
                 $data= $query_result->row();
-                if(!empty($data->total_debit-$data->total_credit)) {
-                    return number_format($data->total_debit-$data->total_credit,2,'.','');
+                if(!empty($data->balance)) {
+                    return $data->balance;
                 }else{
                     return '0.00';
                 }
@@ -618,16 +606,23 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         $rowperpage = $postData['length'];
 
         //all default searching
-        $search_arr[] = "  transaction_info.type IN (3,7) ";
+
         $search_arr[] = "  transaction_info.is_active = 1 ";
 //        $search_arr[] = "  transaction_info.outletID =  ".$this->outletID;
 
         // Custom search filter
-        $customerID = !empty($postData['customerID'])?$postData['customerID']:'';
+        $customerID         = !empty($postData['customerID'])?$postData['customerID']:'';
+        $transactionType    = !empty($postData['transactionType'])?$postData['transactionType']:'';
 
         if (!empty($customerID)) {
             $search_arr[] = " transaction_info.customer_member_id = " . $customerID ;
         }
+        if (!empty($transactionType)) {
+            $search_arr[] = " transaction_info.type = " . $transactionType ;
+        }else{
+            $search_arr[] = "  transaction_info.type IN (3,11,12) ";
+        }
+
 
 
         if(count($search_arr) > 0){
@@ -650,24 +645,19 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         $records = $this->db->get('transaction_info')->result();
         // return $this->db->last_query();
         $data = array();
-        $i=1;
+        $i=(!empty($start)?$start+1:1);
         if(!empty($records)) {
+            $transType=self::transactionType();
             foreach ($records as $key => $record) {
-                $action='';
                 $data[] = $record;
-                $data[$key]->serial_no = (int) $i++;
-                $data[$key]->typeTitle =  ($record->type==3)?"Due Collection":($record->type==7?"Manual Due Add":"");
-                $data[$key]->credit_amount =  ($record->type==3)?$record->credit_amount:
-                    ($record->type==7?$record->debit_amount:"0.00");
-                $data[$key]->is_active =  ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
+                $data[$key]->serial_no      = (int) $i++;
+                $data[$key]->transType      = (!empty($transType[$record->type])?$transType[$record->type]:'-');
+                $data[$key]->amount         = !empty($record->debit_amount)?$record->debit_amount:(!empty
+                ($record->credit_amount)?$record->credit_amount:'');
+                $data[$key]->payment_date   = date('d M, Y',strtotime($record->payment_date));
+                $data[$key]->is_active      =  ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
+                $data[$key]->action         = '<button  class="btn btn-primary  btn-sm" data-toggle="modal" onclick="updateCustomerTransInfo('.$record->id.' )" data-target="#myModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button> <a href="'. base_url('settings/customerTransVoucher/'.$record->id).'" class="btn btn-info  btn-sm"   ><i  class="glyphicon glyphicon-share-alt"></i> view</a>';
 
-                $action .= '<button  class="btn btn-primary  btn-sm" data-toggle="modal" onclick="updateDueCollectInfo('.$record->id.' )" data-target="#myModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button>';
-                if ($this->session->userdata('abhinvoiser_1_1_role') == 'superadmin') {
-                    $action .= ' <button  class="btn btn-danger  btn-sm" onclick="deleteMemberDueCollectionInfo('
-                        . $record->id . ' )" ><i  class="glyphicon glyphicon-remove"></i> Delete</button>';
-                }
-
-                $data[$key]->action =$action;
 
             }
         }
@@ -680,122 +670,72 @@ COUNT(CASE WHEN success_status = 2 THEN success_status ELSE NULL END) failed_sms
         );
         return $response;
     }
-    public function getSingleTransactionInfo($where){
-        $this->db->select("t.*,concat(customer_shipment_member_info.name ,' [',customer_shipment_member_info.mobile,']') as customer_info,,DATE_FORMAT(payment_date, '%d-%m-%Y') as payment_date_title");
-        $this->db->from("transaction_info as t");
-        $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = t.customer_member_id', 'left');
-        if(!empty($where)) {
-            $this->db->where($where);
-        }
-        $query_result = $this->db->get();
-        if($query_result->num_rows()>0) {
-            return $query_result->row();
-        }else{
-            return false;
-        }
-    }
-
-    public function get_single_transaction_info($where){
-        $this->db->select("transaction_info.*,sales_info.sales_date,customer_shipment_member_info.name as customerName,customer_shipment_member_info.mobile as customerMobile,customer_shipment_member_info.address,expense.title as expenseTitle,expenseBankInfo.bank_id as expenseBankID,,tbl_pos_accounts.accountName as bankName, DATE_FORMAT(transaction_info.payment_date, '%d-%m-%Y') AS payment_date_title",true);
-        if(!empty($where)) {
-            $this->db->where($where);
-        }
-        $this->db->where('transaction_info.is_active', 1);
-        $this->db->join('sales_info', 'sales_info.id = transaction_info.sales_id', 'left');
-        $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = transaction_info.customer_member_id', 'left');
-        $this->db->join('all_settings_info as expense', 'expense.id = transaction_info.expense_ctg AND transaction_info.type=8 AND  expense.type=7 ', 'left');
-        $this->db->join('transaction_info as expenseBankInfo', 'expenseBankInfo.parent_id = transaction_info.id AND expenseBankInfo.type=5', 'left');
-        $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = transaction_info.bank_id', 'left');
-
-        $this->db->order_by("transaction_info.id","ASC");
-        $row_info = $this->db->get('transaction_info');
-        if($row_info->num_rows()>0){
-            return $row_info->row();
-        }else{
-            return  false;
-        }
-    }
     public function transactionType(){
-        // 1 = Sales Total Amt (dr), 2 = when sales then payment (Cr), 3 = Due Collection (Cr), 4 = bank Add (Dr), 5 = Bank Cr (Deduct) 6 = Supplier bill Create (Cr), 7 = Supplier Payment (Dr) (Bank Cr), 8 = Expense (Dr) [bank CR]
-        return [
-            1 => 'Sales Total Amt', // Dr
-            2 => 'Payment (When Sales)', // Cr
-            3 => 'Due Collection', // Cr
-            4 => 'Bank Balance Add', //Dr
-            5 => 'Bank Balance Deduct', //Cr
-            6 => 'Supplier Bill Generate', // Cr
-            7 => 'Supplier Payment', // Dr
-            8 => 'Expense', // Dr // Bank Cr
-            9 => 'Customer Opening Deposit', // Cr
-            10=> 'Opening Due', // Dr
-            11=> 'Cash Deposit to Customer', // Dr
-            12=> 'Closing Discount', // Cr
+       // 1 = Sales Total Amt (dr), 2 = when sales then payment (Cr), 3 = Due Collection (Cr), 4 = bank Add (Dr), 5 = Bank Cr (Deduct) 6 = Supplier bill Create (Cr), 7 = Supplier Payment (Dr) (Bank Cr), 8 = Expense (Dr) [bank CR]
+       return [
+          1 => 'Sales Total Amt', // Dr
+          2 => 'Payment (When Sales)', // Cr
+          3 => 'Due Collection', // Cr
+          4 => 'Bank Balance Add', //Dr
+          5 => 'Bank Balance Deduct', //Cr
+          6 => 'Supplier Bill Generate', // Cr
+          7 => 'Supplier Payment', // Dr
+          8 => 'Expense', // Dr // Bank Cr
+          9 => 'Customer Opening Deposit', // Cr
+          10=> 'Opening Due', // Dr
+          11=> 'Cash Deposit to Customer', // Dr
+          12=> 'Closing Discount', // Cr
         ];
     }
 
+    public function customerDueCollection($postData){
 
-    function customerDueReports(){
-
-
-
+        $search_arr[] = "  transaction_info.is_active = 1 ";
+       // $search_arr[] = "  transaction_info.outletID =  ".$this->outletID;
 
         // Custom search filter
-        $outletID = !empty($postData['outletID'])?$postData['outletID']:'';
-        $typeID = !empty($postData['typeID'])?$postData['typeID']:'';
-        $customerName = !empty($postData['customerName'])?$postData['customerName']:'';
+        $customerID         = !empty($postData['customerID'])?$postData['customerID']:'';
+        $transactionType    = !empty($postData['transactionType'])?$postData['transactionType']:'';
 
-        if (!empty($outletID)) {
-            $search_arr[] = " customer_shipment_member_info.outlet_id='" . $outletID . "' ";
+        if (!empty($customerID)) {
+            $search_arr[] = " transaction_info.customer_member_id = " . $customerID ;
         }
-        if (!empty($typeID)) {
-            $search_arr[] = " customer_shipment_member_info.type='" . $typeID . "' ";
+        if (!empty($transactionType)) {
+            $search_arr[] = " transaction_info.type = " . $transactionType ;
+        }else{
+            $search_arr[] = "  transaction_info.type IN (3,11,12) ";
         }
-        if (!empty($customerName)) {
-            $search_arr[] = " customer_shipment_member_info.name like '%" . $customerName . "%' ";
-        }
-
-        $search_arr[] = " customer_shipment_member_info.is_active != 0 ";
         if(count($search_arr) > 0){
             $searchQuery = implode(" and ",$search_arr);
         }
-
-        $this->db->select("customer_shipment_member_info.*,outlet_setup.name as outlet_name,outlet_setup.address as outlet_address ,sum(t.debit_amount) as total_debit,sum(t.credit_amount)  as total_credit,(sum(t.debit_amount) - sum(t.credit_amount)) as current_due",false);
+        $this->db->select("transaction_info.*,outlet_setup.name as outlet_name,concat(customer_shipment_member_info.name ,' [',customer_shipment_member_info.mobile,']') as customer_info ", FALSE);
         if($searchQuery != ''){
             $this->db->where($searchQuery);
         }
-        $this->db->join('outlet_setup', 'outlet_setup.id = customer_shipment_member_info.outlet_id', 'left');
-        $this->db->join('transaction_info as t', 't.customer_member_id = customer_shipment_member_info.id AND t.is_active=1', 'left');
-        $this->db->order_by("current_due", "DESC");
-        $this->db->order_by("customer_shipment_member_info.name", "ASC");
-        $this->db->group_by("customer_shipment_member_info.id");
-//        $this->db->having('current_due>0');
-        $records = $this->db->get('customer_shipment_member_info')->result();
+        if(empty($postData['firstDate'])){
+            $this->db->where('payment_date',date('Y-m-d'));
+        }else{
+            $this->db->where("payment_date >=", $postData['firstDate']);
+            $this->db->where("payment_date <=", $postData['toDate']);
+        }
+        $this->db->join('outlet_setup', 'outlet_setup.id = transaction_info.outletID', 'left');
+        $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = transaction_info.customer_member_id', 'left');
+        $this->db->order_by("transaction_info.id", "ASC");
+        $records = $this->db->get('transaction_info')->result();
+        //return $this->db->last_query();
         $data = array();
-        $i=1;
+        $i=(!empty($start)?$start+1:1);
         if(!empty($records)) {
+            $transType = self::transactionType();
             foreach ($records as $key => $record) {
-                $action='';
                 $data[] = $record;
-                $data[$key]->serial_no = (int) $i++;
-                $data[$key]->is_active =  ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
-
-                    $cuDue= $record->total_debit- $record->total_credit;
-                    $data[$key]->current_due = (!empty($cuDue)) ? "<span class='badge' style='background-color:red;'>"
-                        . number_format($cuDue,2) . "</span>" : "<span class='badge'>0.00</span>";
-                    $data[$key]->current_due_cal = (!empty($cuDue)) ?  $cuDue : '0.00';
-
-
-                    $action .= '  <a  class="btn btn-info  btn-xs"  href="' . base_url('reports/details_customer_member_info/' . $record->id) . ' " ><i  class="glyphicon glyphicon-share-alt"></i> Ledger</a> ';
-
-
-                    $data[$key]->action = $action;
-
-
+                $data[$key]->serial_no      = (int) $i++;
+                 $data[$key]->transType      = (!empty($transType[$record->type])?$transType[$record->type]:'-');
+                $data[$key]->amount         = !empty($record->debit_amount)?$record->debit_amount:(!empty
+                ($record->credit_amount)?$record->credit_amount:'');
+                $data[$key]->payment_date   = date('d M, Y',strtotime($record->payment_date));
             }
         }
-        //
-
         return $data;
     }
-
 }

@@ -9,23 +9,26 @@
                         <div class="col-sm-12" style="background: #fff">
                                 <div class="col-sm-8" style="margin-top:10px;">
                                     <div class="form-group" >
-                                        <div class="col-sm-7 search col-xs-10"  style="margin-bottom:10px;">
+                                        <div class="col-sm-7 search col-xs-12"  style="margin-bottom:10px;">
                                             <div class="row">
                                                 <span class="glyphicon glyphicon-search"></span>
-                                                <input required="" name="cst_name"
-                                                    placeholder="Name/Mobile/Email/ Address"
-                                                    class="customer form-control"
-                                                    id="tags_11">
-                                                <input type="hidden" name="customer" id="cst_id"/>
+<!--                                                <input required="" name="cst_name"-->
+<!--                                                    placeholder="Name/Mobile/Email/ Address"-->
+<!--                                                    class="customer form-control"-->
+<!--                                                    id="tags_11">-->
+<!--                                                <input type="hidden" name="customer" id="cst_id"/>-->
+                                                <select id="cst_id" style="width: 100%" class="customerNameDD"
+                                                        name="customer"
+                                                        required="required"></select>
                                             </div>
                                         </div>
-                                        <div class="col-sm-1 col-xs-2" >
+                                        <div class="col-sm-1 col-xs-4" >
                                                 <button type="button" class="btn btn-info" data-toggle="modal" onclick="addCustomerMemberInfoPos()"
             data-target="#CustomerInfoModal" tabindex="-1"><i class="glyphicon glyphicon-plus"></i> Add</button>
                                         </div>
                                         <div class="col-sm-4 col-xs-8 text-center" style="padding-top:5px" >
                                             <div class="form-check">
-                                                <input class="form-check-input" tabindex="-1" checked type="checkbox" value="1" name="allAreRunningCustomer" id="allAreRunningCustomer">
+                                                <input class="form-check-input" tabindex="-1"  type="checkbox" value="1" name="allAreRunningCustomer" id="allAreRunningCustomer">
                                                 <label class="form-check-label" for="allAreRunningCustomer">
                                                    All are  Running Customer
                                                 </label>
@@ -183,7 +186,7 @@
                                                            class="form-control">
                                                 </p>
                                                 <p>
-                                                    <input  name="discount" id="discount"
+                                                    <input tabindex="-1" name="discount" id="discount"
                                                            class="form-control inputStyle"
                                                            value="0.00">
                                                 </p>
@@ -199,12 +202,30 @@
                                                 >
                                             </th>
                                         </tr>
+                                         <tr>
+                                            <th class="thStyleNew">Receive Account</th>
+                                            <th class="tdStyleNew">
+                                                <select id="receivedBankAcc"
+                                                       class="form-control"
+                                                       name="receivedBankAcc">
+                                                    <option value="">Select Bank Account</option>
+                                                    <?php if(!empty($accounts)){
+                                                        foreach ($accounts as $account) { ?>
+                                                            <option value="<?php echo $account->accountID; ?>">
+                                                                <?php echo $account->accountName; ?>
+                                                                <?php echo (!empty($account->accountNumber)?"["
+                                                                    .$account->accountNumber."]":''); ?>
+                                                            </option>
+                                                        <?php } } ?>
+                                                </select>
+                                            </th>
+                                        </tr>
+
                                         <tr>
-                                            <td colspan="2" style="background-color: #d0d0d0;">
-                                                <table class="table table-bordered width0per" style="margin-top: 10px">
+                                            <td colspan="2" class="tdStyleNew">
+                                                <table class="table table-bordered">
                                                     <tr>
-                                                        <td rowspan="4"  style="width: 100px" class="paymentBy"> <div
-                                                                    class="rotatedPaymentBy">Payment By</div>  </td>
+                                                        <td rowspan="4"  class="paymentBy"> Received Method </td>
                                                         <td>
                                                             <label class="radio-inline"> <input type="checkbox" tabindex="-1"  id="cash"
                                                                                                 value="cash"
@@ -213,15 +234,14 @@
                                                                                                 name="payment_by[0]"
                                                                 ></label>
                                                         </td>
-                                                        <td class="width10per">
+                                                        <td>
                                                             Cash
                                                         </td>
 
-                                                        <td >
+                                                        <td>
                                                             <input type="text" placeholder="0.00"   id="cash_amount"
-                                                                   style="width: 100%;"
                                                                    name="payment_ctg_amount[]"
-                                                                   class=" payment_ctg_amount">
+                                                                   class="form-control payment_ctg_amount">
                                                         </td>
                                                     </tr>
                                                     <tr>
@@ -238,9 +258,9 @@
 
                                                         <td>
                                                             <input type="text" tabindex="-1" placeholder="0.00"  readonly
-                                                                   id="cash_cheque_amount" style="width: 100%;"
+                                                                   id="cash_cheque_amount"
                                                                    name="payment_ctg_amount[]"
-                                                                   class="payment_ctg_amount">
+                                                                   class="form-control payment_ctg_amount">
                                                         </td>
                                                     </tr>
                                                     <tr>
@@ -257,8 +277,8 @@
 
                                                         <td>
                                                             <input type="text" tabindex="-1" placeholder="0.00"   id="due_cheque_amount"
-                                                                   name="payment_ctg_amount[]" tabindex="-1" readonly style="width: 100%;"
-                                                                   class="payment_ctg_amount">
+                                                                   name="payment_ctg_amount[]" tabindex="-1" readonly
+                                                                   class="form-control payment_ctg_amount">
                                                         </td>
                                                     </tr>
                                                     <tr>
@@ -275,8 +295,8 @@
 
                                                         <td>
                                                             <input placeholder="0.00"  tabindex="-1" type="text"  id="online_amount" readonly
-                                                                   name="payment_ctg_amount[]" style="width: 100%;"
-                                                                   class="payment_ctg_amount">
+                                                                   name="payment_ctg_amount[]"
+                                                                   class="form-control payment_ctg_amount">
                                                         </td>
                                                     </tr>
                                                 </table>
@@ -291,19 +311,6 @@
                                                         class="form-control inputStyle"  name="paidNow" style='border:1px solid blue;' >
                                             </th>
                                         </tr>
-                                        <tr>
-                                            <th class="thStyleNew"  style="color:blue;">Account </th>
-                                            <th class="tdStyleNew">
-                                                <select required name="account_id" class="form-control"
-                                                        style="width: 100%;">
-                                                    <?php if(!empty($account)){
-                                                        foreach ($account as $eachaccount) { ?>
-                                                            <option value="<?php echo $eachaccount->accountID; ?>"><?php echo $eachaccount->accountName; ?></option>
-                                                        <?php } } ?>
-                                                </select>
-                                            </th>
-                                        </tr>
-
                                         <tr>
 
                                             <th class="thStyleNew" >Current Due </th>
@@ -328,14 +335,13 @@
                                                 <input tabindex="-1" id="totalCustomerDue" readonly placeholder="0.00" value='0.00'  type="text"  class="form-control inputStyle"  name="totalCustomerDue" >
                                             </th>
                                         </tr>
-                                        <!--
                                         <tr>
                                             <th class="thStyleNew"> </th>
                                             <th class="thStyleNew"  >
                                                 <label class="radio-inline"> <input type="checkbox"  id="isRemainingDueMakesWithDiscount" value="1" tabindex="-1" name="isRemainingDueMakesWithDiscount" ><b> Remaining Due Make as  Discount </b></label>
                                             </th>
                                         </tr>
-                                           -->
+
                                         <tr id="div5">
                                             <th colspan="4">
                                                 <button type="button" id="confirmModal" class="btn btn-block btn-success"   >SALES NOW </button>
@@ -505,6 +511,7 @@
                             <input type="hidden" name="upId" id="upId" >
                             <input type="hidden" value="<?php  echo 1 ?>" name="type"   id="type" >
                             <input type="hidden" value="<?php  echo (!empty($redierct_page)?$redierct_page:'') ?>" name="redierct_page" id="redierct_page" >
+                            <input type="hidden" name="openingBalanceType"  value="1" >
                             <button type="button" onclick="saveCustomerMemberInfoPos()" name="saveBtn" id="saveBtn"
                                     class="btn
                                                         btn-success submit_btn"><i class="glyphicon glyphicon-ok-sign"></i> Save</button>

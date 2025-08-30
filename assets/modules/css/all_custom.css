@@ -40,7 +40,7 @@
 }
 
 .table-style td{
-    padding: 7px;
+    padding: 3px;
 }
 .table-style-main td{
     padding: 5px;
@@ -67,14 +67,22 @@ address p {
 .table-style td{
     padding-top:1px;
     padding-bottom:1px;
-    padding-left:5px;
+    padding-left:3px;
     border: 1px solid #d0d0d0;
     text-align: center;
+    font-size:12px;
 }
 .table-style th{
     border: 1px solid #d0d0d0;
     text-align: center;
 }
+.width2per{
+    width:2% !important;
+}
+.width5per{
+    width:5% !important;
+}
+
 .width10per{
     width:10% !important;
 }
@@ -190,3 +198,7 @@ address p {
     z-index: 9999;
 }
 /*Barcode pirnting End*/
+
+.padding-right-5px{
+    padding-right: 5px;
+}

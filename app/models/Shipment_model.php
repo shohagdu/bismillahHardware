@@ -94,15 +94,24 @@ class Shipment_model extends CI_Model {
         }
     }
     public function shipment_stock_details($param){
-        $this->db->select('shipment_stock_details.*,member.name as member_name,member.mobile,member.email,member.address,shipment_record.title as shipmentTitle,shipment_record.arrival_dt,shipment_record.receive_dt,shipment_stock_info.destibute_dt');
-        if($param != ''){
+
+        $this->db->select("transaction_info.*,
+        purchase_info_stock_in.id, 
+        purchase_info_stock_in.purchase_id, 
+        purchase_info_stock_in.purchase_date, 
+        purchase_info_stock_in.purchase_date, 
+        purchase_info_stock_in.note, 
+        purchase_info_stock_in.is_active,customer_shipment_member_info.name as supplierName,accountName,accountNumber", false);
+
+        $this->db->join('purchase_info_stock_in', 'transaction_info.purchase_id = purchase_info_stock_in.id', 'left');
+        $this->db->join('customer_shipment_member_info', 'customer_shipment_member_info.id = purchase_info_stock_in.supplier_id', 'left');
+        $this->db->join('tbl_pos_accounts', 'tbl_pos_accounts.accountID = transaction_info.bank_id', 'left');
+
+        if(!empty($param)){
             $this->db->where($param);
         }
-        $this->db->join("shipment_stock_info","shipment_stock_info.id=shipment_stock_details.shipment_id","left");
-        $this->db->join("shipment_record","shipment_record.id=shipment_stock_info.shipment_id","left");
-        $this->db->join("customer_shipment_member_info as member","member.id=shipment_stock_details.member_id","left");
-        $this->db->order_by("shipment_stock_details.id", "DESC");
-        $query = $this->db->get('shipment_stock_details');
+        $this->db->order_by("transaction_info.id", "ASC");
+        $query = $this->db->get('transaction_info');
         if($query->num_rows()>0){
             return  $query->result();
         }else{
@@ -272,28 +281,28 @@ class Shipment_model extends CI_Model {
         // Custom search filter
         $memberID = !empty($postData['member'])?$postData['member']:'';
         if (!empty($memberID)) {
-            $search_arr[] = " shipment_stock_details.member_id='" . $memberID . "' ";
+            $search_arr[] = " transaction_info.customer_member_id='" . $memberID . "' ";
         }
 
-        $search_arr[] = "  shipment_stock_details.type = 3 ";
-        $search_arr[] = "  shipment_stock_details.is_active != 0 ";
+        $search_arr[] = "  transaction_info.type = 7 ";
+        $search_arr[] = "  transaction_info.is_active = 1 ";
         if(count($search_arr) > 0){
             $searchQuery = implode(" and ",$search_arr);
         }
         //return $searchQuery;
         ## Total number of records without filtering
-        $totalRecords=$this->__get_count_row('shipment_stock_details',$searchQuery);
+        $totalRecords=$this->__get_count_row('transaction_info',$searchQuery);
         ## Total number of record with filtering
-        $totalRecordwithFilter=$this->__get_count_row('shipment_stock_details',$searchQuery);
+        $totalRecordwithFilter=$this->__get_count_row('transaction_info',$searchQuery);
         ## Fetch records
-        $this->db->select("shipment_stock_details.*,concat(member.name,' (',member.address,')') as member_name,member.mobile,member.email,member.address");
+        $this->db->select("transaction_info.*,concat(member.name,' (',member.address,')') as member_name,member.mobile,member.email,member.address");
         if($searchQuery != ''){
             $this->db->where($searchQuery);
         }
-        $this->db->join("customer_shipment_member_info as member","member.id=shipment_stock_details.member_id","left");
-        $this->db->order_by("shipment_stock_details.id", "DESC");
+        $this->db->join("customer_shipment_member_info as member","member.id=transaction_info.customer_member_id","left");
+        $this->db->order_by("transaction_info.id", "DESC");
         $this->db->limit($rowperpage, $start);
-        $records = $this->db->get('shipment_stock_details')->result();
+        $records = $this->db->get('transaction_info')->result();
 
         $data = array();
         $i=1;
@@ -301,7 +310,7 @@ class Shipment_model extends CI_Model {
             foreach ($records as $key => $record) {
                 $data[] = $record;
                 $data[$key]->serial_no = (int) $i++;
-                $data[$key]->trans_date = !empty($record->trans_date)?date('d M, Y',strtotime($record->trans_date)):"";
+                $data[$key]->payment_date = !empty($record->payment_date)?date('d M, Y',strtotime($record->payment_date)):"";
                 $data[$key]->action = '<button  class="btn btn-primary  btn-xs" data-toggle="modal" onclick="updatShipmentMemberDueCollection('.$record->id.' )" data-target="#myModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button> <button  class="btn btn-danger  btn-xs"  onclick="deleteDueCollection(' . $record->id.' )" ><i  class="glyphicon glyphicon-remove"></i> Delete</button>';
             }
         }
@@ -315,12 +324,12 @@ class Shipment_model extends CI_Model {
         return $response;
     }
 
-    public function show_member_due_amount($param){
-        $this->db->select("sum(shipment_stock_details.credit_amount) as tCreditAmt,sum(shipment_stock_details.debit_amount) as tDebitAmt");
+    public function  show_member_due_amount($param){
+        $this->db->select("sum(transaction_info.credit_amount) as tCreditAmt,sum(transaction_info.debit_amount) as tDebitAmt");
         if($param != ''){
             $this->db->where($param);
         }
-        $query = $this->db->get('shipment_stock_details');
+        $query = $this->db->get('transaction_info');
         if($query->num_rows()>0){
              $data= $query->row();
             return number_format($data->tDebitAmt-$data->tCreditAmt,2,'.','');
@@ -363,9 +372,9 @@ class Shipment_model extends CI_Model {
 
 
         // Custom search filter
-        $outletID = !empty($postData['outletID'])?$postData['outletID']:'';
-        $typeID = !empty($postData['typeID'])?$postData['typeID']:'';
-        $customerName = !empty($postData['customerName'])?$postData['customerName']:'';
+        $outletID       = !empty($postData['outletID'])?$postData['outletID']:'';
+        $typeID         = !empty($postData['typeID'])?$postData['typeID']:'';
+        $customerName   = !empty($postData['customerName'])?$postData['customerName']:'';
 
         if (!empty($outletID)) {
             $search_arr[] = " customer_shipment_member_info.outlet_id='" . $outletID . "' ";
@@ -406,8 +415,8 @@ class Shipment_model extends CI_Model {
                 $data[$key]->is_active =  ($record->is_active==1)?"<span class='badge bg-green'>Active</span>":"<span class='badge bg-red'>Inactive</span>";
 
                     // This is for member
-                    $data[$key]->current_due = "<span class='badge bg-green'>".$this->show_member_due_amount(['shipment_stock_details.member_id'=>$record->id,'shipment_stock_details.is_active'=>1])."</span>";
-                    $data[$key]->current_stock = "<span class='badge bg-yellow'>".$this->show_member_stock_qty(['shipment_stock_details.member_id'=>$record->id,'shipment_stock_details.is_active'=>1])."</span>";
+                    $data[$key]->current_due = "<span class='badge bg-blue'>".$this->show_member_due_amount(['transaction_info.customer_member_id'=>$record->id,'transaction_info.is_active'=>1])."</span>";
+
                     $data[$key]->action = '<button  class="btn btn-primary  btn-xs" data-toggle="modal" onclick="updateCustomerMemberInfo(' . $record->id . ' )" data-target="#myModal"><i  class="glyphicon glyphicon-pencil"></i> Edit</button> <button  class="btn btn-danger  btn-xs"  onclick="deleteCustomerMemberInfo(' . $record->id.','.$record->type . ' )" ><i  class="glyphicon glyphicon-remove"></i> Delete</button> <a  class="btn btn-info  btn-xs"  href="' . base_url('shipment_info/details_member_info/' . $record->id) . ' " ><i  class="glyphicon glyphicon-share-alt"></i>  Ledger</a> ';
 
 
