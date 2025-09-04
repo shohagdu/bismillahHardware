@@ -1,3 +1,10 @@
+<style>
+
+    .modal-body {
+        overflow-y: auto; /* make sure scrolling is allowed */
+    }
+
+</style>
 <section class="content">
     <div class="row">
         <div class="box-body" id="alert" style="display: none;"> <div class="callout callout-info"><span
@@ -69,7 +76,7 @@
 
     </div>
 </section>
-<div class="modal fade" id="myModal" role="dialog">
+<div id="myModal" class="modal  fade" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form action="" method="post" id="customerDueCollectionForm" class="form-horizontal"
               enctype="multipart/form-data">
@@ -280,4 +287,16 @@
         </form>
     </div>
 </div>
+
+<style>
+    /* ১. modal-body কে scrollable করা */
+    .modal-body {
+        max-height: 70vh;     /* viewport height এর 70% */
+        overflow-y: auto !important;  /* vertical scroll allow */
+        overflow-x: hidden;   /* horizontal scroll hide */
+    }
+
+
+</style>
+
 

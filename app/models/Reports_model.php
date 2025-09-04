@@ -348,7 +348,7 @@ class Reports_model extends CI_Model {
             $this->db->where($searchQuery);
         }
         $this->db->join('outlet_setup', 'outlet_setup.id = customer_shipment_member_info.outlet_id', 'left');
-        $this->db->join('transaction_info as t', 't.customer_member_id = customer_shipment_member_info.id', 'left');
+        $this->db->join('transaction_info as t', 't.customer_member_id = customer_shipment_member_info.id AND t.is_active=1', 'left');
         $this->db->group_by("customer_shipment_member_info.id");
         $this->db->order_by("current_due", "DESC");
         $records = $this->db->get('customer_shipment_member_info');
