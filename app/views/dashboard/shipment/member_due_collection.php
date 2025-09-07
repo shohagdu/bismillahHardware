@@ -249,3 +249,11 @@
         </form>
     </div>
 </div>
+<style>
+    /* ১. modal-body কে scrollable করা */
+    .modal-body {
+        max-height: 70vh;     /* viewport height এর 70% */
+        overflow-y: auto !important;  /* vertical scroll allow */
+        overflow-x: hidden;   /* horizontal scroll hide */
+    }
+</style>

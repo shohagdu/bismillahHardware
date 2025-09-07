@@ -295,8 +295,6 @@
         overflow-y: auto !important;  /* vertical scroll allow */
         overflow-x: hidden;   /* horizontal scroll hide */
     }
-
-
 </style>
 
 

@@ -357,9 +357,18 @@ function saveCustomerMemberInfoPos() {
                 $('#CustomerInfoModal').modal('hide');
                 var data=response.data;
                 $("#showMemberInfo").show();
-                var name_show = data.name+' ('+data.mobile+') ' + data.address;
-                $("#tags_11").val(name_show);
-                $("#cst_id").val(data.id);
+                var selectedData = {
+                    id: data.id,
+                    text: data.name + ' (' + data.mobile + ') ' + data.address
+                };
+
+                $("#cst_id").select2("trigger", "select", {
+                    data: selectedData
+                });
+
+               //  var name_show = data.name+' ('+data.mobile+') ' + data.address;
+               // // $("#tags_11").val(name_show);
+               //  $("#cst_id").val(name_show);
                 $("#mobile").html(data.mobile);
                 $("#member_mobile").val(data.mobile);
                 $("#showName").html( data.name);
